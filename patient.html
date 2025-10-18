@@ -2531,6 +2531,9 @@ function showTrackingModal(orderId) {
                        // Refresh the prescriptions list from backend
                         await generateAllPrescriptions();
                         showConfirmationModal("Prescription Added", "Your offline prescription has been added successfully.");
+                        // THIS IS THE MISSING LINE:
+                        // Tell the chatbot to fetch and display the new summary.
+                        showPrescriptionSummaryInChat();
                     } catch (error) {
                         console.error('Upload error:', error);
                         showConfirmationModal("Upload Failed", "Failed to save prescription. Please try again.");
