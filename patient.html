@@ -1973,7 +1973,10 @@ function showTrackingModal(orderId) {
 
                 // Medicine reminder modal
                 document.getElementById('addReminderBtn').addEventListener('click', () => document.getElementById('medicineReminderModal').classList.add('active'));
-                document.getElementById('saveReminderBtn').addEventListener('click', saveMedicineReminder);
+                document.getElementById('saveReminderBtn').addEventListener('click', async (event) => {
+                event.preventDefault(); // <-- THIS IS THE FIX
+                await saveMedicineReminder();
+            });
 
                 document.getElementById('confirmSos').addEventListener('click', () => { document.getElementById('sosModal').classList.remove('active'); showConfirmationModal('SOS Activated', 'Emergency services have been notified.'); });
                 document.getElementById('reportIssueForm')?.addEventListener('submit', (e) => { e.preventDefault(); showConfirmationModal('Report Submitted', 'Your report has been sent for review.'); e.target.reset(); setTimeout(() => showScreen('moreScreen'), 2000); });
