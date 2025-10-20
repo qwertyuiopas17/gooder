@@ -1380,7 +1380,7 @@
         </div>
     </div>
     <div id="medicineReminderModal" class="modal">
-        <div class="modal-content" id="medicineReminderForm"> <h3>Add Medicine Reminder</h3>
+        <form class="modal-content" id="medicineReminderForm"> <h3>Add Medicine Reminder</h3>
             <div class="form-group">
                 <label for="medicineName">Medicine Name</label>
                 <input type="text" id="medicineName" class="form-control" placeholder="e.g., Paracetamol">
@@ -1403,10 +1403,9 @@
             </div>
             <div style="display: flex; gap: 1rem;">
                 <button id="saveReminderBtn" class="btn btn-primary">Save Reminder</button>
-                <button class="btn" onclick="document.getElementById('medicineReminderModal').classList.remove('active')">Cancel</button>
+                <button type="button" class="btn" onclick="document.getElementById('medicineReminderModal').classList.remove('active')">Cancel</button>
             </div>
-        </div>
-    </div>
+        </form> </div>
 
 
     <script>
