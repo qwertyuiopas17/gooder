@@ -4179,7 +4179,7 @@ Possible solutions:
                 }
 
                 // Show alerts in chat if any
-                if (alerts.length > 0 && document.getElementById('chatWindow')) {
+                if (alerts.length > 0 && document.getElementById('chatbotScreen').classList.contains('active')) {
                     showMedicineAlerts(alerts);
                 }
             }
@@ -4479,7 +4479,6 @@ Possible solutions:
                                 <div style="font-size: 3rem; margin-bottom: 1rem;">💊</div>
                                 <h3>No Medicine Reminders</h3>
                                 <p style="color: var(--text-color-secondary); margin-bottom: 2rem;">You don't have any active medicine reminders yet.</p>
-                                <button class="btn btn-primary" onclick="document.getElementById('medicineReminderModal').classList.add('active')">Add Your First Reminder</button>
                             </div>
                         `;
                     }
