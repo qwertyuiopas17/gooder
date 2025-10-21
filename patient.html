@@ -4717,7 +4717,7 @@ Possible solutions:
                 // Register Service Worker and set up banner
                 if ('serviceWorker' in navigator && 'PushManager' in window) {
                     try {
-                        await navigator.serviceWorker.register('/sw2.js'); // Assuming your file is sw2.js
+                        await navigator.serviceWorker.register('/sw.js'); // Assuming your file is sw2.js
                         console.log('Service Worker registered successfully');
                         setupNotificationBanner(); // Show the banner if needed
                     } catch (error) {
