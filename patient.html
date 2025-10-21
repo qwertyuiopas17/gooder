@@ -4357,56 +4357,7 @@ Possible solutions:
 
             
 
-            async function saveMedicineReminder(isEdit = false) {
-                const medicineName = document.getElementById('medicineName').value.trim();
-                const dosage = document.getElementById('medicineDosage').value.trim();
-                const times = document.getElementById('medicineTimes').value.trim();
-                const duration = document.getElementById('medicineDuration').value;
-                const instructions = document.getElementById('medicineInstructions').value.trim();
-
-                if (!medicineName || !dosage || !times) {
-                    alert('Please fill in all required fields');
-                    return;
-                }
-
-                try {
-                    const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userId: user.patientId,
-                            action: 'add',
-                            medicine_name: medicineName,
-                            dosage: dosage,
-                            times: times.split(',').map(t => t.trim()),
-                            duration_days: parseInt(duration),
-                            instructions: instructions
-                        })
-                    });
-
-                    if (response.ok) {
-                        document.getElementById('medicineReminderModal').classList.remove('active');
-                        // Clear form
-                        document.getElementById('medicineName').value = '';
-                        document.getElementById('medicineDosage').value = '';
-                        document.getElementById('medicineTimes').value = '';
-                        document.getElementById('medicineDuration').value = '30';
-                        document.getElementById('medicineInstructions').value = '';
-
-                        // Refresh reminders display
-                        await loadMedicineRemindersScreen();
-                        await checkMedicineReminders(); // Also refresh home screen counter
-
-                        const actionText = isEdit ? 'updated' : 'added';
-                        showConfirmationModal('Success', `Medicine reminder ${actionText} successfully!`);
-                    } else {
-                        throw new Error('Failed to save reminder');
-                    }
-                } catch (error) {
-                    console.error('Save reminder error:', error);
-                    alert('Failed to save medicine reminder. Please try again.');
-                }
-            }
+            
 
             // Enhanced SOS Detection in Chatbot
             async function checkForEmergency(message) {
@@ -4610,6 +4561,15 @@ Possible solutions:
             
             // ENHANCED saveMedicineReminder function
             async function saveMedicineReminder() {
+                // --- NEW LOGIC: Ask for permission right when the user clicks save ---
+    if (Notification.permission !== "granted") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+            alert("Notification permission is required to set reminders. Please allow notifications and try again.");
+            return; // Stop the function if permission is denied
+        }
+    }
+    // --- END NEW LOGIC ---
                 const isEdit = currentlyEditing !== null;
                 const action = isEdit ? 'update' : 'add';
 
@@ -4789,7 +4749,7 @@ if ('serviceWorker' in navigator) {
             console.error('Service Worker registration failed:', error);
         });
 }
-                await requestNotificationPermission(); // Ask for permission on load
+                // Ask for permission on load
 
     // Start a timer to check for notifications every 30 seconds
                 setInterval(async () => {
