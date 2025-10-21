@@ -4682,6 +4682,7 @@ Possible solutions:
 
             if (Notification.permission === 'granted') {
                 banner.style.display = 'none';
+                subscribeUser(); // --- ADD THIS LINE ---
                 return;
             }
             
