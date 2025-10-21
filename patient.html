@@ -4608,6 +4608,8 @@ Possible solutions:
                 document.getElementById('medicineReminderForm').reset();
                 currentlyEditing = null;
                 document.getElementById('saveReminderBtn').textContent = 'Save Reminder';
+                // --- ADD THIS LINE TO UPDATE THE HOME SCREEN ---
+                await checkMedicineReminders();
                 await loadMedicineRemindersScreen();
                 showConfirmationModal('Success', `Medicine reminder ${isEdit ? 'updated' : 'added'}!`);
 
