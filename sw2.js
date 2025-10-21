@@ -1,21 +1,28 @@
 // In sw.js
-
-// This is the API URL of your backend on Render
 const API_BASE_URL = 'https://sahara-sathi.onrender.com';
 
+// NEW: Listener for push events from the server
+self.addEventListener('push', event => {
+    console.log('[Service Worker] Push Received.');
+    
+    // The server sends the notification details in the push payload
+    const data = event.data.json();
+    const title = data.title;
+    const options = data.options;
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Your existing notification click listener (no changes needed)
 self.addEventListener('notificationclick', event => {
-    // Always close the notification when a button is clicked
     event.notification.close();
 
-    // Get the data passed from the main page
     const medicineName = event.notification.data.medicineName;
     const userId = event.notification.data.userId;
 
-    // Check which button was clicked
     if (event.action === 'mark-taken') {
         console.log(`'Mark as Taken' clicked for ${medicineName}`);
 
-        // This makes an API call to your backend, just like the button in the app
         event.waitUntil(
             fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
                 method: 'POST',
@@ -28,7 +35,7 @@ self.addEventListener('notificationclick', event => {
                 })
             }).then(response => {
                 if (!response.ok) {
-                    console.error('Failed to mark medicine as taken from notification.');
+                    console.error('Failed to mark as taken from notification.');
                 } else {
                     console.log('Successfully marked as taken from notification.');
                 }
@@ -36,8 +43,5 @@ self.addEventListener('notificationclick', event => {
                 console.error('Fetch error in Service Worker:', error);
             })
         );
-    } else {
-        // This handles clicks on the notification body itself or the 'Close' button
-        console.log('Notification was clicked or closed.');
     }
 });
