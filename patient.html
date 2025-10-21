@@ -4692,28 +4692,46 @@ async function requestNotificationPermission() {
 }
 
 // --- STEP 3: Add a function to check for and show notifications ---
+// In patient.html
+
 function checkAndShowNotifications(reminders) {
-    if (Notification.permission !== "granted") {
-        return; // Can't show notifications if permission is not granted
+    if (Notification.permission !== "granted" || !('serviceWorker' in navigator)) {
+        return; // Exit if permissions aren't granted or service workers aren't supported
     }
 
     const now = new Date();
 
     reminders.forEach(reminder => {
-        if (!reminder.next_alert_utc) return; // Skip if no alert time is set
+        if (!reminder.next_alert_utc) return;
 
         const alertTime = new Date(reminder.next_alert_utc);
 
-        // Check if the alert time is in the past and hasn't been shown yet
-        if (alertTime <= now && !reminder.is_alert_shown) {
-            new Notification("💊 Sehat Sahara Reminder", {
+        // A simple flag to prevent showing the same alert repeatedly
+        if (alertTime <= now && !sessionStorage.getItem(`alert_shown_${reminder.medicine_name}_${reminder.next_alert_utc}`)) {
+            
+            const title = "💊 Sehat Sahara Reminder";
+            const options = {
                 body: `It's time to take your medicine: ${reminder.medicine_name} (${reminder.dosage}).`,
-                icon: "https://i.ibb.co/84XpXLX/hero-pic.png" // Optional: Add an icon
+                icon: "https://i.ibb.co/84XpXLX/hero-pic.png",
+                // --- NEW: This adds the buttons ---
+                actions: [
+                    { action: 'mark-taken', title: 'Mark as Taken' },
+                    { action: 'close', title: 'Close' }
+                ],
+                // --- NEW: This passes data to the service worker ---
+                data: {
+                    medicineName: reminder.medicine_name,
+                    userId: user.patientId // Pass the current user's ID
+                }
+            };
+
+            // Use the Service Worker to show the notification
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, options);
             });
 
-            // Mark the alert as shown to prevent it from re-appearing
-            // (You would need backend logic to persist this state)
-            reminder.is_alert_shown = true;
+            // Mark this specific alert time as shown in the browser's session storage
+            sessionStorage.setItem(`alert_shown_${reminder.medicine_name}_${reminder.next_alert_utc}`, 'true');
         }
     });
 }
@@ -4759,6 +4777,18 @@ function checkAndShowNotifications(reminders) {
                 setupUploadPrescription();
                 setupChatbot();
                 setupWebRTC();
+                // In patient.html, inside your initializeApp() function
+
+// --- NEW: Register the Service Worker ---
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw2.js')
+        .then(registration => {
+            console.log('Service Worker registered successfully:', registration);
+        })
+        .catch(error => {
+            console.error('Service Worker registration failed:', error);
+        });
+}
                 await requestNotificationPermission(); // Ask for permission on load
 
     // Start a timer to check for notifications every 30 seconds
