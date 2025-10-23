@@ -327,19 +327,23 @@
             };
             
             async function checkAuth() {
-    // This correctly simulates a logged-in Saathi user object
+    // This function simply checks for the user data saved by index.html
     const userData = localStorage.getItem('sehatSaharaUser');
+    
     if (userData) {
         saathi = JSON.parse(userData);
-        
-        // Ensure the 'role' is present for future checks
-        if (!saathi.role) {
-            saathi.role = 'saathi'; // Assume the logged-in user is a Saathi
+
+        // For security, we can also check if the role is correct.
+        if (saathi.role !== 'saathi') {
+            alert('Access Denied. Please log in with a Saathi account.');
+            localStorage.removeItem('sehatSaharaUser'); // Clear wrong login
+            window.location.href = 'index.html';
+            return false;
         }
         
         return true;
     } else {
-        // If no user data is found, redirect to login
+        // If no user data is found, they must go back to the login page.
         window.location.href = 'index.html';
         return false;
     }
