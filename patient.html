@@ -900,7 +900,7 @@
                     <!-- --- MODIFIED: Corrected viewBox --- -->
                     <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                 </button>
-                <button class="btn btn-sos" id="sosButton" onclick="startSosCountdown()">SOS</button>
+                <button class="btn btn-sos" id="sosButton">SOS</button>
             </div>
         </header>
         <div class="page-content">
@@ -1437,7 +1437,7 @@
         const API_BASE_URL = '/api';
                     // SOS Countdown Function
 let sosCountdownInterval;
-function startSosCountdown() {
+function startSosCountdown(user) {
     document.getElementById('sosCountdownModal').classList.add('active');
     let countdown = 5;
     const countdownElement = document.getElementById('countdownNumber');
@@ -1449,7 +1449,7 @@ function startSosCountdown() {
         if (countdown <= 0) {
             clearInterval(sosCountdownInterval);
             document.getElementById('sosCountdownModal').classList.remove('active');
-            triggerSos();
+            triggerSos(user);
         }
     }, 1000);
 
@@ -1461,7 +1461,7 @@ function startSosCountdown() {
 }
 
 // Trigger SOS after countdown
-async function triggerSos() {
+async function triggerSos(user) {
     try {
         // Get location
         if (!navigator.geolocation) {
@@ -4851,7 +4851,10 @@ Possible solutions:
                 await loadDashboard();
                 await loadChatHistory(); // Add this line
                 generateOrdersList();
-
+// ✅ ADD THIS EVENT LISTENER
+    document.getElementById('sosButton').addEventListener('click', () => {
+        startSosCountdown(user); // Pass the user object
+    });
                 loadAndDisplaySummary(); // <-- Use our new function
                 renderBookingStep(1);
                 setupModalsAndActions();

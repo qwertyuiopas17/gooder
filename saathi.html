@@ -326,10 +326,24 @@
         ]
             };
             
-            function checkAuth() {
-                saathi = { fullName: "Rohan Sharma" };
-                return true;
-            }
+            async function checkAuth() {
+    // This correctly simulates a logged-in Saathi user object
+    const userData = localStorage.getItem('sehatSaharaUser');
+    if (userData) {
+        saathi = JSON.parse(userData);
+        
+        // Ensure the 'role' is present for future checks
+        if (!saathi.role) {
+            saathi.role = 'saathi'; // Assume the logged-in user is a Saathi
+        }
+        
+        return true;
+    } else {
+        // If no user data is found, redirect to login
+        window.location.href = 'index.html';
+        return false;
+    }
+}
 
             function updateUIText() {
                 const langPack = translations[currentLanguage] || translations.en;
@@ -630,42 +644,42 @@ function setupNotificationBanner() {
     dismissBtn.onclick = () => banner.style.display = 'none';
 }
 
-            function initializeApp() {
-                if(checkAuth()){
-                    setupNavigation();
-                    setupThemeAndLanguage();
-                    generateTasks();
-                    generateTrainingModules();
-                    generateEarningsHistory();
-                    loadNotifications(); // Add this line
-                    setupFormsAndModals();
+            // This function now waits for authentication before loading data
 
-                    // Add this block for service worker and push notifications
+async function initializeApp() {
+    const isAuthenticated = await checkAuth(); // Wait for the check to complete
+    if(isAuthenticated){
+        setupNavigation();
+        setupThemeAndLanguage();
+        generateTasks(); // This uses mock data, which is fine for now
+        generateTrainingModules();
+        generateEarningsHistory();
+        loadNotifications(); // This will now fetch REAL SOS data
+        setupFormsAndModals();
+
         if ('serviceWorker' in navigator && 'PushManager' in window) {
             try {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registered successfully');
-                        setupNotificationBanner();
-                        subscribeUser();
-                    })
-                    .catch(error => {
-                        console.error('Service Worker registration failed:', error);
-                    });
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                console.log('Service Worker registered successfully');
+                setupNotificationBanner();
+                // We call subscribeUser here to ensure it runs after registration
+                subscribeUser(); 
             } catch (error) {
-                console.warn('Push notifications are not supported in this browser.');
+                console.error('Service Worker registration failed:', error);
             }
         } else {
             console.warn('Push notifications are not supported in this browser.');
         }
-                    
-                    document.getElementById('logoutBtn').addEventListener('click', () => {
-                        showConfirmationModal("Logged Out", "You have been successfully logged out.");
-                    });
-    
-                    updateUIText();
-                }
-            }
+        
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('sehatSaharaUser'); // Clear login state
+            showConfirmationModal("Logged Out", "You have been successfully logged out.");
+            setTimeout(() => window.location.href = 'index.html', 1500);
+        });
+
+        updateUIText();
+    }
+}
 
             initializeApp();
         });
