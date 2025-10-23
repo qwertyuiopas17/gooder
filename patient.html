@@ -2576,6 +2576,8 @@ function showTrackingModal(orderId) {
             // --- END OF FIX ---
 
                         // Refresh the prescriptions list from backend
+                        // --- FIX: ADD THIS LINE TO REFRESH THE HOMEPAGE DATA ---
+                        await loadDashboard();
                         await generateAllPrescriptions();
                         
                     } catch (error) {
