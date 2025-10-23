@@ -1517,6 +1517,7 @@ async function loadChatHistory() {
         console.error('Failed to load chat history:', error);
     }
 }
+            // In patient.html, add this new function
             async function loadDoctors() {
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/doctors`);
@@ -1538,7 +1539,6 @@ async function loadChatHistory() {
                     }
                 }
             }
-            // In patient.html, add this new function
 
             async function loadBookingData() {
                 try {
@@ -2546,45 +2546,32 @@ function showTrackingModal(orderId) {
                         }
 
                         const uploadResult = await response.json();
-                        
+                        const extracted = uploadResult.extractedData || {};
 
                         
                        
-                       // --- FIX: REPLACE THE LOGIC AFTER THE FETCH CALL WITH THIS ---
-            if (uploadResult.success && uploadResult.formatted_response) {
-                
-                // Step 1: Close the upload modal and stop the camera
-                const uploadModal = document.getElementById('uploadPrescriptionModal');
-                const feed = document.getElementById('uploadCameraFeed');
-                if (feed.srcObject) {
-                    feed.srcObject.getTracks().forEach(track => track.stop());
-                    feed.srcObject = null;
-                }
-                uploadModal.classList.remove('active');
-                
-                // Step 2: Navigate the user to the chatbot screen
-                showScreen('chatbotScreen');
-
-                // Step 3: Display the summary in the now-visible chat window
-                displaySummaryInChat(uploadResult.formatted_response);
-                
-                // Step 4: Show a less intrusive confirmation
-                // This is better than a modal that blocks the view
-                // (Assuming you have a function for this, otherwise a simple alert works)
-                showConfirmationModal("Success", "Your prescription has been added and a summary is shown below.");
-            }
-            // --- END OF FIX ---
+                       // --- NEW LOGIC ---
+                        // Check if the upload response includes our summary text
+                        if (uploadResult.success && uploadResult.formatted_response) {
+                            // Directly display the summary we just received
+                            displaySummaryInChat(uploadResult.formatted_response);
+                        }
+                        // --- END NEW LOGIC ---
 
                         // Refresh the prescriptions list from backend
                         // --- FIX: ADD THIS LINE TO REFRESH THE HOMEPAGE DATA ---
                         await loadDashboard();
                         await generateAllPrescriptions();
-                        
+                        showConfirmationModal("Prescription Added", "Your offline prescription has been added successfully.");
                     } catch (error) {
                         console.error('Upload error:', error);
                         showConfirmationModal("Upload Failed", "Failed to save prescription. Please try again.");
                     }
 
+                    // Stop stream
+                    stream.getTracks().forEach(track => track.stop());
+                    document.getElementById('uploadPrescriptionModal').classList.remove('active');
+                    document.getElementById('providerName').value = '';
                 });
             }
 
@@ -2607,6 +2594,30 @@ function showTrackingModal(orderId) {
 async handleChatbotResponse(response) {
     this.displayMessage(response.response, 'bot');
     this.clearButtons(); // Always clear old buttons first
+
+    // --- FIX: ADD THIS BLOCK TO HANDLE THE NEW ACTION ---
+    if (response.action === 'EXECUTE_BOOKING') {
+                        try {
+                            const bookingResponse = await fetch(`${API_BASE_URL}/v1/book-doctor`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    userId: user.patientId, // Add userId for authentication
+                                    ...response.parameters
+                                })
+                            });
+                            const bookingResult = await bookingResponse.json();
+                            if (bookingResult.success) {
+                                this.displayMessage("✅ Your appointment is confirmed!", 'bot');
+                                await generateAppointments(); // This refreshes the UI
+                            } else {
+                                this.displayMessage(`Booking failed: ${bookingResult.message}`, 'bot');
+                            }
+                        } catch (e) {
+                            this.displayMessage("Sorry, there was a network error while confirming the booking.", 'bot');
+                        }
+                    }
+                    // --- END OF FIX ---
 
     if (response.action === 'BOOKING_SUCCESS') {
         await generateAppointments();
