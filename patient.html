@@ -1435,56 +1435,7 @@
         // For Render deployment, uncomment if needed:
          //const API_BASE_URL = 'https://sahara-sathi.onrender.com';
         const API_BASE_URL = '/api';
-
-        console.log('Using API base URL:', API_BASE_URL);
-        let medicineCart = [], selectedPharmacy = null;
-
-        document.addEventListener('DOMContentLoaded', async function() {
-            let user = null, currentLanguage = 'en', bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
-
-            const translations = {
-                en: { welcome_message: "Welcome, {name}", welcome_subtitle: "Your health dashboard is ready.", next_appointment: "Next Appointment", new_prescriptions: "New Prescriptions", from_last_visit: "From past visits", home_nav: "Home", appointments_nav: "Appointments", records_nav: "Records", book_nav: "Book", more_nav: "More", appointments_title: "My Appointments", records_title: "Digital Health Record", book_title: "Book a Consultation", more_title: "More Options", prescriptions_title: "My Prescriptions", scan_medicine: "Scan Medicine", book_medicine: "Book Medicine", health_chatbot: "Health Chatbot", scan_medicine_title: "Scan Medicine", book_medicine_title: "Book Medicine", health_chatbot_title: "Health Assistant", select_pharmacy: "Select a Pharmacy"},
-                hi: { welcome_message: "नमस्ते, {name}", welcome_subtitle: "आपका स्वास्थ्य डैशबोर्ड तैयार है।", next_appointment: "अगली अपॉइंटमेंट", new_prescriptions: "नई दवाइयाँ", from_last_visit: "पिछली मुलाक़ात से", home_nav: "होम", appointments_nav: "अपॉइंटमेंट्स", records_nav: "रिकॉर्ड्स", book_nav: "बुक करें", more_nav: "और", appointments_title: "मेरी अपॉइंटमेंट्स", records_title: "डिजिटल स्वास्थ्य रिकॉर्ड", book_title: "परामर्श बुक करें", more_title: "अन्य विकल्प", prescriptions_title: "मेरे नुस्खे", scan_medicine: "दवा स्कैन करें", book_medicine: "दवा बुक करें", health_chatbot: "स्वास्थ्य चैटबॉट", scan_medicine_title: "दवा स्कैन करें", book_medicine_title: "दवा बुक करें", health_chatbot_title: "स्वास्थ्य सहायक", select_pharmacy: "एक फार्मेसी चुनें"}
-            };
-
-            const appData = {
-                records: [ { date: "2025-09-15", title: "Consultation with Dr. Priya Sharma", description: "Follow-up regarding skin rash. Prescription for ointment updated." }, { date: "2025-08-02", title: "Blood Test Report Uploaded", description: "Complete Blood Count (CBC) report added." } ],
-                appointments: [
-                    { id: 1, doctor: "Anjali Verma", type: "General Physician", date: "2025-09-28", time: "04:30 PM", mode: "Video"},
-                    { id: 2, doctor: "Priya Sharma", type: "Child Specialist", date: "2025-09-15", time: "10:00 AM", mode: "Video", prescription: { medications: [{name: 'Paracetamol 500mg', dosage: '1 tablet thrice a day', time: 'Morning, Afternoon, Evening'}, {name: 'Azithromycin 250mg', dosage: '1 tablet daily', time: 'Morning'}], tests: ['Blood Test', 'X-Ray'] }},
-                    { id: 3, doctor: "Sameer Patel", type: "General Physician", date: "2025-09-20", time: "11:00 AM", mode: "Audio", prescription: { medications: [{name: 'Vitamin C 1000mg', dosage: '1 tablet daily', time: 'Morning'}], tests: ['Complete Blood Count'] }}
-                ],
-                offlinePrescriptions: [{ doctor: "Local Store", type: "Offline", date: "2025-07-20", prescription: { medications: [{name: 'Antacid Syrup', dosage: '2 spoons after meals', time: 'After meals'}], tests: ['Ultrasound'] }}],
-                orders: [],
-                pharmacy: [ 
-                    {id: 1, name: "Apollo Pharmacy", address: "123, Park Street, Kolkata", delivery: "30-45 mins", contact: "9876543210"},
-                    {id: 2, name: "Frank Ross", address: "45, AJC Bose Road, Kolkata", delivery: "45-60 mins", contact: "9876543211"},
-                    {id: 3, name: "Wellness Forever", address: "78, Ballygunge Circular, Kolkata", delivery: "20-35 mins", contact: "9876543212"}
-                ],
-                // START: REPLACE YOUR OLD 'medicines' ARRAY WITH THIS OBJECT
-    medicines: {
-        'pain-fever': [
-            {id: 1, name: "Paracetamol (500mg)", price: 25.00, description: "Effective pain relief and fever reducer"},
-            {id: 2, name: "Ibuprofen (400mg)", price: 35.00, description: "Anti-inflammatory pain relief"},
-            {id: 3, name: "Crocin Pain Relief", price: 45.00, description: "Advanced pain relief formula"}
-        ],
-        'cough-cold': [
-            {id: 4, name: "Cetirizine (10mg)", price: 18.00, description: "Allergy relief and antihistamine"},
-            {id: 5, name: "Grilinctus Cough Syrup (100ml)", price: 85.00, description: "Effective cough suppressant"},
-            {id: 6, name: "Vicks Action 500 Advanced", price: 55.00, description: "Multi-symptom cold relief"}
-        ],
-        'stomach': [
-            {id: 7, name: "Digene Antacid Gel", price: 65.00, description: "Fast relief from acidity and gas"},
-            {id: 8, name: "Pudin Hara Pearls", price: 45.00, description: "Ayurvedic digestive relief"},
-            {id: 9, name: "Eno Fruit Salt", price: 15.00, description: "Instant relief from acidity"}
-        ]
-    },
-    
-                
-            };
-            // Add these two new functions
-
-// SOS Countdown Function
+                    // SOS Countdown Function
 let sosCountdownInterval;
 function startSosCountdown() {
     document.getElementById('sosCountdownModal').classList.add('active');
@@ -1563,6 +1514,56 @@ async function triggerSos() {
         showConfirmationModal('SOS Failed', 'Failed to activate emergency services. Please call 108 directly.');
     }
 }
+
+        console.log('Using API base URL:', API_BASE_URL);
+        let medicineCart = [], selectedPharmacy = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            let user = null, currentLanguage = 'en', bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
+
+            const translations = {
+                en: { welcome_message: "Welcome, {name}", welcome_subtitle: "Your health dashboard is ready.", next_appointment: "Next Appointment", new_prescriptions: "New Prescriptions", from_last_visit: "From past visits", home_nav: "Home", appointments_nav: "Appointments", records_nav: "Records", book_nav: "Book", more_nav: "More", appointments_title: "My Appointments", records_title: "Digital Health Record", book_title: "Book a Consultation", more_title: "More Options", prescriptions_title: "My Prescriptions", scan_medicine: "Scan Medicine", book_medicine: "Book Medicine", health_chatbot: "Health Chatbot", scan_medicine_title: "Scan Medicine", book_medicine_title: "Book Medicine", health_chatbot_title: "Health Assistant", select_pharmacy: "Select a Pharmacy"},
+                hi: { welcome_message: "नमस्ते, {name}", welcome_subtitle: "आपका स्वास्थ्य डैशबोर्ड तैयार है।", next_appointment: "अगली अपॉइंटमेंट", new_prescriptions: "नई दवाइयाँ", from_last_visit: "पिछली मुलाक़ात से", home_nav: "होम", appointments_nav: "अपॉइंटमेंट्स", records_nav: "रिकॉर्ड्स", book_nav: "बुक करें", more_nav: "और", appointments_title: "मेरी अपॉइंटमेंट्स", records_title: "डिजिटल स्वास्थ्य रिकॉर्ड", book_title: "परामर्श बुक करें", more_title: "अन्य विकल्प", prescriptions_title: "मेरे नुस्खे", scan_medicine: "दवा स्कैन करें", book_medicine: "दवा बुक करें", health_chatbot: "स्वास्थ्य चैटबॉट", scan_medicine_title: "दवा स्कैन करें", book_medicine_title: "दवा बुक करें", health_chatbot_title: "स्वास्थ्य सहायक", select_pharmacy: "एक फार्मेसी चुनें"}
+            };
+
+            const appData = {
+                records: [ { date: "2025-09-15", title: "Consultation with Dr. Priya Sharma", description: "Follow-up regarding skin rash. Prescription for ointment updated." }, { date: "2025-08-02", title: "Blood Test Report Uploaded", description: "Complete Blood Count (CBC) report added." } ],
+                appointments: [
+                    { id: 1, doctor: "Anjali Verma", type: "General Physician", date: "2025-09-28", time: "04:30 PM", mode: "Video"},
+                    { id: 2, doctor: "Priya Sharma", type: "Child Specialist", date: "2025-09-15", time: "10:00 AM", mode: "Video", prescription: { medications: [{name: 'Paracetamol 500mg', dosage: '1 tablet thrice a day', time: 'Morning, Afternoon, Evening'}, {name: 'Azithromycin 250mg', dosage: '1 tablet daily', time: 'Morning'}], tests: ['Blood Test', 'X-Ray'] }},
+                    { id: 3, doctor: "Sameer Patel", type: "General Physician", date: "2025-09-20", time: "11:00 AM", mode: "Audio", prescription: { medications: [{name: 'Vitamin C 1000mg', dosage: '1 tablet daily', time: 'Morning'}], tests: ['Complete Blood Count'] }}
+                ],
+                offlinePrescriptions: [{ doctor: "Local Store", type: "Offline", date: "2025-07-20", prescription: { medications: [{name: 'Antacid Syrup', dosage: '2 spoons after meals', time: 'After meals'}], tests: ['Ultrasound'] }}],
+                orders: [],
+                pharmacy: [ 
+                    {id: 1, name: "Apollo Pharmacy", address: "123, Park Street, Kolkata", delivery: "30-45 mins", contact: "9876543210"},
+                    {id: 2, name: "Frank Ross", address: "45, AJC Bose Road, Kolkata", delivery: "45-60 mins", contact: "9876543211"},
+                    {id: 3, name: "Wellness Forever", address: "78, Ballygunge Circular, Kolkata", delivery: "20-35 mins", contact: "9876543212"}
+                ],
+                // START: REPLACE YOUR OLD 'medicines' ARRAY WITH THIS OBJECT
+    medicines: {
+        'pain-fever': [
+            {id: 1, name: "Paracetamol (500mg)", price: 25.00, description: "Effective pain relief and fever reducer"},
+            {id: 2, name: "Ibuprofen (400mg)", price: 35.00, description: "Anti-inflammatory pain relief"},
+            {id: 3, name: "Crocin Pain Relief", price: 45.00, description: "Advanced pain relief formula"}
+        ],
+        'cough-cold': [
+            {id: 4, name: "Cetirizine (10mg)", price: 18.00, description: "Allergy relief and antihistamine"},
+            {id: 5, name: "Grilinctus Cough Syrup (100ml)", price: 85.00, description: "Effective cough suppressant"},
+            {id: 6, name: "Vicks Action 500 Advanced", price: 55.00, description: "Multi-symptom cold relief"}
+        ],
+        'stomach': [
+            {id: 7, name: "Digene Antacid Gel", price: 65.00, description: "Fast relief from acidity and gas"},
+            {id: 8, name: "Pudin Hara Pearls", price: 45.00, description: "Ayurvedic digestive relief"},
+            {id: 9, name: "Eno Fruit Salt", price: 15.00, description: "Instant relief from acidity"}
+        ]
+    },
+    
+                
+            };
+            // Add these two new functions
+
+
             // In patient.html, add this new function inside the main script area
 
     async function loadChatHistory() {
@@ -4813,6 +4814,7 @@ Possible solutions:
                 })
                 .catch(error => console.error('Error fetching summary on page load:', error));
             }
+
 
             
 

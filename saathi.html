@@ -293,6 +293,7 @@
 </div>
 
     <script>
+        const API_BASE_URL = '/api';
         document.addEventListener('DOMContentLoaded', function() {
             let saathi = null;
             let currentLanguage = 'en';
@@ -457,7 +458,7 @@
             async function loadNotifications() {
     try {
         // NOTE: This endpoint does not exist in your backend yet.
-        const response = await fetch('/v1/sos-events', {
+        const response = await fetch(`${API_BASE_URL}/v1/sos-events`, { 
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -537,7 +538,7 @@ async function respondToNotification(notificationId) {
         }
 
         // NOTE: This endpoint does not exist in your backend yet.
-        const response = await fetch('/v1/sos-respond', {
+        const response = await fetch(`${API_BASE_URL}/v1/sos-respond`, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -585,7 +586,7 @@ function urlB64ToUint8Array(base64String) {
 
 async function subscribeUser() {
     try {
-        const response = await fetch('/v1/vapid-public-key');
+        const response = await fetch(`${API_BASE_URL}/v1/vapid-public-key`);
         const data = await response.json();
         const applicationServerKey = urlB64ToUint8Array(data.publicKey);
         let subscription = await navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription());
@@ -604,7 +605,7 @@ async function subscribeUser() {
                 applicationServerKey: applicationServerKey
             })
         );
-        await fetch('/v1/subscribe', {
+        await fetch(`${API_BASE_URL}/v1/subscribe`, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: saathi.patientId, subscription: subscription })
