@@ -1466,31 +1466,52 @@
             };
             // In patient.html, add this new function inside the main script area
 
-    async function loadChatHistory() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/v1/history`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.patientId, limit: 50 })
-            });
-            const data = await response.json();
-            if (data.success && data.history) {
-                const chatWindow = document.getElementById('chatWindow');
-                chatWindow.innerHTML = ''; // Clear the welcome message
-                data.history.forEach(turn => {
-                    let content = turn.content;
-                    if (turn.role === 'assistant') {
-                        try {
-                            content = JSON.parse(turn.content).response;
-                        } catch (e) { /* It's just a string, use as is */ }
+    // Inside your <script> tag...
+
+async function loadChatHistory() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/history`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.patientId, limit: 50 })
+        });
+        const data = await response.json();
+        if (data.success && data.history) {
+            const chatWindow = document.getElementById('chatWindow');
+            // Do not clear the chat window here, append after the welcome message
+            // chatWindow.innerHTML = ''; 
+
+            data.history.forEach(turn => {
+                // Ignore turns where the user message was an empty system message
+                if (turn.role === 'user' && !turn.content.trim()) {
+                    return;
+                }
+
+                let content = turn.content;
+                if (turn.role === 'assistant') {
+                    try {
+                        // This correctly extracts the text from the JSON response
+                        const parsedContent = JSON.parse(turn.content);
+                        content = parsedContent.response;
+                    } catch (e) { 
+                        // It's just a string, use as is (fallback)
+                        content = turn.content;
                     }
-                    enhancedChatbot.displayMessage(content, turn.role);
-                });
-            }
-        } catch (error) {
-            console.error('Failed to load chat history:', error);
+                }
+                
+                // --- FIX: Map 'assistant' role to 'bot' for CSS styling ---
+                const senderRole = turn.role === 'assistant' ? 'bot' : 'user';
+
+                // Only display the message if there's content to show
+                if (content && content.trim()) {
+                    enhancedChatbot.displayMessage(content, senderRole);
+                }
+            });
         }
+    } catch (error) {
+        console.error('Failed to load chat history:', error);
     }
+}
             async function loadDoctors() {
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/doctors`);
