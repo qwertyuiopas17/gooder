@@ -3244,83 +3244,82 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
 
 
                 // This is your FULL original event listener, now it works correctly.
-                chatForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const userInput = chatInput.value.trim();
-                    if (!userInput) return;
+                // Inside your setupChatbot function, replace the entire chatForm.addEventListener block
 
-                    // Store the last user message for contextual button generation
-                    // --- CHANGE THIS LINE ---
-                    enhancedChatbot.displayMessage(userInput, 'user'); // Use the class method
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userInput = chatInput.value.trim();
+    if (!userInput) return;
 
-                    console.log('Frontend: Sending message:', userInput, 'userId:', user.patientId);
-                    
-                    chatInput.value = '';
+    enhancedChatbot.lastUserMessage = userInput;
 
-                    const typingIndicator = document.createElement('div');
-                    typingIndicator.classList.add('chat-message', 'bot-message');
-                    typingIndicator.textContent = 'Typing...';
-                    chatWindow.appendChild(typingIndicator);
-                    chatWindow.scrollTop = chatWindow.scrollHeight;
+    // --- CHANGE #1: Use the class method ---
+    enhancedChatbot.displayMessage(userInput, 'user');
+    
+    chatInput.value = '';
 
-                    try {
-                        // Your SOS check logic is preserved
-                        const sosCheck = await checkForEmergency(userInput);
-                        if (sosCheck.emergency_detected) {
-                            chatWindow.removeChild(typingIndicator);
+    const typingIndicator = document.createElement('div');
+    typingIndicator.classList.add('chat-message', 'bot-message');
+    typingIndicator.textContent = 'Typing...';
+    chatWindow.appendChild(typingIndicator);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
 
-                            // Show SOS alert
-                            const sosAlert = document.createElement('div');
-                            sosAlert.className = 'sos-alert';
-                            sosAlert.innerHTML = `
-                                <h3>🚨 EMERGENCY DETECTED!</h3>
-                                <p>${sosCheck.response}</p>
-                                <p><strong>Emergency Number: 108</strong></p>
-                            `;
-                            chatWindow.appendChild(sosAlert);
+    try {
+        // --- YOUR SOS LOGIC IS PRESERVED HERE ---
+        const sosCheck = await checkForEmergency(userInput);
+        if (sosCheck.emergency_detected) {
+            chatWindow.removeChild(typingIndicator);
 
-                            // Auto-dial for critical emergencies
-                            if (sosCheck.critical && sosCheck.parameters.auto_dial) {
-                                setTimeout(() => {
-                                    window.location.href = `tel:${sosCheck.parameters.emergency_number}`;
-                                }, 3000);
-                            }
+            const sosAlert = document.createElement('div');
+            sosAlert.className = 'sos-alert';
+            sosAlert.innerHTML = `
+                <h3>🚨 EMERGENCY DETECTED!</h3>
+                <p>${sosCheck.response}</p>
+                <p><strong>Emergency Number: 108</strong></p>
+            `;
+            chatWindow.appendChild(sosAlert);
 
-                            chatWindow.scrollTop = chatWindow.scrollHeight;
-                            chatInput.value = '';
-                            return;
-                        }
+            if (sosCheck.critical && sosCheck.parameters.auto_dial) {
+                setTimeout(() => {
+                    window.location.href = `tel:${sosCheck.parameters.emergency_number}`;
+                }, 3000);
+            }
 
-                        // Your original predict call is preserved
-                        const response = await fetch(`${API_BASE_URL}/v1/predict`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                message: userInput,
-                                userId: user.patientId,
-                                language: currentLanguage
-                            })
-                        });
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            chatInput.value = '';
+            return; // Stop further processing after an SOS
+        }
+        // --- END OF SOS LOGIC ---
 
-                        if (!response.ok) {
-                            throw new Error(`HTTP Error: ${response.status}`);
-                        }
+        const response = await fetch(`${API_BASE_URL}/v1/predict`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: userInput,
+                userId: user.patientId,
+                language: currentLanguage
+            })
+        });
 
-                        const data = await response.json();
-                        chatWindow.removeChild(typingIndicator);
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
 
-                        // Use enhanced chatbot handler
-                        await enhancedChatbot.handleChatbotResponse(data);
+        const data = await response.json();
+        chatWindow.removeChild(typingIndicator);
+        await enhancedChatbot.handleChatbotResponse(data);
 
-                    } catch (error) {
-                        console.error('Chat Error:', error);
-                        chatWindow.removeChild(typingIndicator);
-                        addMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
-                    }
-                });
+    } catch (error) {
+        console.error('Chat Error:', error);
+        chatWindow.removeChild(typingIndicator);
+        
+        // --- CHANGE #2: Use the class method for the error message ---
+        enhancedChatbot.displayMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
+    }
+});
 
                 // The rest of your function is also preserved
-                addMessage("Welcome to Enhanced Sehat Sahara! I can help with appointments, prescriptions, medicine reminders, and health guidance.", "bot");
+                
 
                 checkMedicineReminders();
                 
@@ -4755,6 +4754,7 @@ Possible solutions:
                 currentlyEditing = null;
                 document.getElementById('saveReminderBtn').textContent = 'Save Reminder';
                 await loadMedicineRemindersScreen();
+                await checkMedicineReminders();
                 showConfirmationModal('Success', `Medicine reminder ${isEdit ? 'updated' : 'added'}!`);
 
             } catch (error) {
