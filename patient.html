@@ -1309,6 +1309,9 @@
                         <form class="chat-input" id="chatForm">
                             <input type="text" id="chatInput" class="form-control" placeholder="Ask about symptoms, dosage...">
                             <button type="submit" class="btn btn-primary">Send</button>
+                            <button type="button" class="btn" id="record-button" style="min-width: 50px;">🎤</button>
+                            
+                            <button type="submit" class="btn btn-primary">Send</button>
                         </form>
                     </div>
                 </section>
@@ -3188,9 +3191,73 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
             // --- FIX END ---
 
             function setupChatbot() {
+                
                 const chatForm = document.getElementById('chatForm');
                 const chatInput = document.getElementById('chatInput');
-                // The 'addMessage' function is NO LONGER defined here.
+                const chatWindow = document.getElementById('chatWindow'); // Make sure chatWindow is defined here
+                
+                // --- START: Speech-to-Text code ---
+                const recordButton = document.getElementById('record-button');
+
+                // Check if the browser supports the Web Speech API
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+                if (SpeechRecognition) {
+                    const recognition = new SpeechRecognition();
+                    
+                    // Use the app's current language (from your 'translations' object)
+                    // 'currentLanguage' is already defined in your main script
+                    recognition.lang = currentLanguage || 'en-US'; 
+                    recognition.interimResults = false;
+                    recognition.continuous = false;
+
+                    recordButton.addEventListener('click', () => {
+                        console.log("Recording started...");
+                        recordButton.textContent = '...'; // Show a "listening" state
+                        recordButton.disabled = true;
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.error("Recognition already started.", e);
+                            recordButton.textContent = '🎤'; // Reset button
+                            recordButton.disabled = false;
+                        }
+                    });
+
+                    // This event fires when speech is recognized
+                    recognition.onresult = (event) => {
+                        const spokenText = event.results[0][0].transcript;
+                        console.log("User said:", spokenText);
+                        chatInput.value = spokenText; // Put the text in the chat box
+                        
+                        // --- Optional: Automatically send the message ---
+                        // You can uncomment the line below to send the message immediately
+                        // chatForm.dispatchEvent(new Event('submit')); 
+                    };
+
+                    // Handle end of speech
+                    recognition.onend = () => {
+                        recordButton.textContent = '🎤'; // Reset button icon
+                        recordButton.disabled = false;
+                    };
+
+                    // Handle errors
+                    recognition.onerror = (event) => {
+                        console.error("Speech recognition error:", event.error);
+                        recordButton.textContent = '🎤'; // Reset button on error
+                        recordButton.disabled = false;
+                        if (event.error === 'not-allowed') {
+                            alert("Please allow microphone access in your browser settings to use this feature.");
+                        }
+                    };
+
+                } else {
+                    // Browser doesn't support it
+                    console.log("Speech recognition not supported in this browser.");
+                    recordButton.style.display = 'none'; // Hide the button if not supported
+                }
+                // --- END: Speech-to-Text code ---
+
 
                 // This is your FULL original event listener, now it works correctly.
                 chatForm.addEventListener('submit', async (e) => {
