@@ -1569,44 +1569,31 @@ async function triggerSos(user) {
 
             // In patient.html, add this new function inside the main script area
 
-    // Replace your entire loadChatHistory function with this one.
-
-async function loadChatHistory() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/v1/history`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.patientId, limit: 50 })
-        });
-        const data = await response.json();
-        if (data.success && data.history) {
-            const chatWindow = document.getElementById('chatWindow');
-            chatWindow.innerHTML = ''; // Clear the welcome message
-
-            data.history.forEach(turn => {
-                let messageToDisplay = turn.content;
-                // The backend stores the bot's response as a JSON string.
-                // We need to parse it to get the actual message text.
-                if (turn.role === 'assistant') {
-                    try {
-                        // Safely parse the JSON and get the 'response' text
-                        const botResponseObject = JSON.parse(turn.content);
-                        messageToDisplay = botResponseObject.response;
-                    } catch (e) {
-                        // If it's not valid JSON, it's probably an old, simple message. Display it as is.
-                        messageToDisplay = turn.content;
-                    }
-                }
-                // Use the single, reliable displayMessage function
-                if (messageToDisplay) { // Only display if there's content
-                    enhancedChatbot.displayMessage(messageToDisplay, turn.role);
-                }
+    async function loadChatHistory() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/v1/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.patientId, limit: 50 })
             });
+            const data = await response.json();
+            if (data.success && data.history) {
+                const chatWindow = document.getElementById('chatWindow');
+                chatWindow.innerHTML = ''; // Clear the welcome message
+                data.history.forEach(turn => {
+                    let content = turn.content;
+                    if (turn.role === 'assistant') {
+                        try {
+                            content = JSON.parse(turn.content).response;
+                        } catch (e) { /* It's just a string, use as is */ }
+                    }
+                    enhancedChatbot.displayMessage(content, turn.role);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load chat history:', error);
         }
-    } catch (error) {
-        console.error('Failed to load chat history:', error);
     }
-}
             async function loadDoctors() {
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/doctors`);
@@ -2694,23 +2681,53 @@ function showTrackingModal(orderId) {
 
                 // In patient.html, inside the SmartSehatSaharaChatbot class
 
-// Also inside the SmartSehatSaharaChatbot class,
-// replace the handleChatbotResponse function with this version.
-
 async handleChatbotResponse(response) {
     this.displayMessage(response.response, 'bot');
-    this.clearButtons();
+    this.clearButtons(); // Always clear old buttons first
 
-    // --- THIS IS THE KEY CHANGE ---
-    // After displaying the message, execute the action.
-    if (response.action) {
-        await this.handleAction(response.action, response.parameters);
+    if (response.action === 'BOOKING_SUCCESS') {
+        await generateAppointments();
     }
-    // --- END OF CHANGE ---
 
+    // Priority 1: The ideal case where the AI correctly provides the buttons.
     if (response.interactive_buttons && response.interactive_buttons.length > 0) {
         this.showInteractiveButtons(response.interactive_buttons);
-    } else if (response.intent === 'general_inquiry') {
+        return; // Buttons are shown, our job is done.
+    }
+
+    // --- NEW FALLBACK LOGIC ---
+    // Priority 2: If the AI failed to create buttons but the backend INTENDED for it to,
+    // we will create them manually here. We know the intent because the action is 'SHOW_GUIDANCE'.
+    if (response.action === 'SHOW_GUIDANCE') {
+        const contextualButtons = [];
+        // The backend also sends the original intent, which we can use here.
+        const intent = response.intent;
+
+        if (intent === 'medicine_scan' || intent === 'how_to_medicine_scan') {
+            contextualButtons.push({
+                text: '📷 Open Scanner',
+                action: 'START_MEDICINE_SCANNER',
+                parameters: {},
+                style: 'primary'
+            });
+        } else if (intent === 'prescription_upload' || intent === 'how_to_prescription_upload' || intent === 'prescription_inquiry') {
+            contextualButtons.push({
+                text: '📤 Upload Prescription',
+                action: 'UPLOAD_PRESCRIPTION',
+                parameters: {},
+                style: 'primary'
+            });
+        }
+
+        if (contextualButtons.length > 0) {
+            this.showInteractiveButtons(contextualButtons);
+            return; // Fallback buttons are shown, our job is done.
+        }
+    }
+    // --- END OF NEW FALLBACK LOGIC ---
+
+    // Priority 3 (Final Fallback): If it's just a general inquiry, show the main help buttons.
+    if (response.intent === 'general_inquiry') {
         this.showGeneralHelpButtons();
     }
 }
@@ -2718,17 +2735,28 @@ async handleChatbotResponse(response) {
 
                 // In patient.html, inside the SmartSehatSaharaChatbot class
 
-                // Inside the SmartSehatSaharaChatbot class in patient.html
+                async handleButtonClick(button) {
+    console.log('Button clicked:', button.action, button.text, button.parameters);
 
-// Replace your old handleButtonClick function with these two new ones.
+    // Define actions that should continue the conversation in the chat window
+    const conversationalActions = [
+        'SELECT_SPECIALTY', 'SELECT_DOCTOR', 'SELECT_DATE', 
+        'SELECT_TIME', 'SELECT_MODE'
+    ];
 
-async handleAction(action, parameters) {
-    // This function decides what to do based on the 'action' from the backend.
-    switch (action) {
-        case 'EXECUTE_BOOKING':
-            // This is the new logic that was missing.
-            await this.executeBookingFromChat(parameters);
-            break;
+    if (conversationalActions.includes(button.action)) {
+        // For conversational actions, send the selection back to the backend
+        // This simulates the user typing their choice.
+        this.displayMessage(button.text, 'user'); // Show the user's choice immediately
+        this.clearButtons(); // Remove buttons after selection
+
+        // Send a request to the backend with the button's action and parameters
+        await this.sendPredictRequest(button.text, button.action, button.parameters);
+        return; // Stop further processing
+    }
+
+    // Handle simple NAVIGATION actions as before.
+    switch (button.action) {
         case 'START_MEDICINE_SCANNER':
         case 'SCAN_MEDICINE':
             showScreen('scanMedicineScreen');
@@ -2736,41 +2764,21 @@ async handleAction(action, parameters) {
         case 'UPLOAD_PRESCRIPTION':
             document.getElementById('uploadPrescriptionModal').classList.add('active');
             break;
-        case 'BOOKING_SUCCESS':
-            // After a successful booking, refresh the appointments list on the other screen.
-            await generateAppointments();
-            break;
         default:
-            console.warn(`Unhandled action from backend: ${action}`);
+            console.warn(`Unhandled navigation action: ${button.action}`);
             break;
     }
-}
 
-async executeBookingFromChat(parameters) {
-    // This function makes the final API call to the /v1/book-doctor endpoint.
-    this.displayMessage("Finalizing your booking details now...", 'bot');
+    // Log the click in the background (no changes needed here).
     try {
-        const response = await fetch(`${API_BASE_URL}/v1/book-doctor`, {
+        await fetch(`${API_BASE_URL}/v1/button-action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: user.patientId,
-                doctorId: parameters.doctorId,
-                appointmentDatetime: parameters.appointmentDatetime,
-                appointmentType: parameters.appointmentType,
-                chiefComplaint: parameters.chiefComplaint
-            })
+            body: JSON.stringify({ userId: user.patientId, buttonAction: button.action })
         });
-        const data = await response.json();
-        if (data.success) {
-            this.displayMessage("✅ All set! Your appointment has been booked. You can see it in the 'Appointments' section.", 'bot');
-        } else {
-            this.displayMessage(`❌ Sorry, there was an error: ${data.message}`, 'bot');
-        }
-    } catch (e) {
-        console.error('Booking execution error:', e);
-        this.displayMessage('❌ There was a network problem while trying to confirm the booking. Please try again.', 'bot');
-    }
+    } catch (error) { console.error('Button action API error:', error); }
+
+    this.clearButtons();
 }
 // Add this new helper function inside the SmartSehatSaharaChatbot class
 async sendPredictRequest(message, buttonAction = null, parameters = null) {
@@ -3172,7 +3180,17 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
 
             
 
-            
+            // --- FIX START ---
+            // The addMessage function is moved here, to a higher scope, so the event listener can find it.
+            const chatWindow = document.getElementById('chatWindow');
+            const addMessage = (text, sender) => {
+                const msgEl = document.createElement('div');
+                msgEl.classList.add('chat-message', `${sender}-message`);
+                msgEl.textContent = text;
+                chatWindow.appendChild(msgEl);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            };
+            // --- FIX END ---
 
             function setupChatbot() {
                 
@@ -3244,82 +3262,82 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
 
 
                 // This is your FULL original event listener, now it works correctly.
-                // Inside your setupChatbot function, replace the entire chatForm.addEventListener block
+                chatForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const userInput = chatInput.value.trim();
+                    if (!userInput) return;
 
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const userInput = chatInput.value.trim();
-    if (!userInput) return;
+                    // Store the last user message for contextual button generation
+                    enhancedChatbot.lastUserMessage = userInput;
 
-    enhancedChatbot.lastUserMessage = userInput;
+                    console.log('Frontend: Sending message:', userInput, 'userId:', user.patientId);
+                    addMessage(userInput, 'user'); // This call now works
+                    chatInput.value = '';
 
-    // --- CHANGE #1: Use the class method ---
-    enhancedChatbot.displayMessage(userInput, 'user');
-    
-    chatInput.value = '';
+                    const typingIndicator = document.createElement('div');
+                    typingIndicator.classList.add('chat-message', 'bot-message');
+                    typingIndicator.textContent = 'Typing...';
+                    chatWindow.appendChild(typingIndicator);
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
 
-    const typingIndicator = document.createElement('div');
-    typingIndicator.classList.add('chat-message', 'bot-message');
-    typingIndicator.textContent = 'Typing...';
-    chatWindow.appendChild(typingIndicator);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
+                    try {
+                        // Your SOS check logic is preserved
+                        const sosCheck = await checkForEmergency(userInput);
+                        if (sosCheck.emergency_detected) {
+                            chatWindow.removeChild(typingIndicator);
 
-    try {
-        // --- YOUR SOS LOGIC IS PRESERVED HERE ---
-        const sosCheck = await checkForEmergency(userInput);
-        if (sosCheck.emergency_detected) {
-            chatWindow.removeChild(typingIndicator);
+                            // Show SOS alert
+                            const sosAlert = document.createElement('div');
+                            sosAlert.className = 'sos-alert';
+                            sosAlert.innerHTML = `
+                                <h3>🚨 EMERGENCY DETECTED!</h3>
+                                <p>${sosCheck.response}</p>
+                                <p><strong>Emergency Number: 108</strong></p>
+                            `;
+                            chatWindow.appendChild(sosAlert);
 
-            const sosAlert = document.createElement('div');
-            sosAlert.className = 'sos-alert';
-            sosAlert.innerHTML = `
-                <h3>🚨 EMERGENCY DETECTED!</h3>
-                <p>${sosCheck.response}</p>
-                <p><strong>Emergency Number: 108</strong></p>
-            `;
-            chatWindow.appendChild(sosAlert);
+                            // Auto-dial for critical emergencies
+                            if (sosCheck.critical && sosCheck.parameters.auto_dial) {
+                                setTimeout(() => {
+                                    window.location.href = `tel:${sosCheck.parameters.emergency_number}`;
+                                }, 3000);
+                            }
 
-            if (sosCheck.critical && sosCheck.parameters.auto_dial) {
-                setTimeout(() => {
-                    window.location.href = `tel:${sosCheck.parameters.emergency_number}`;
-                }, 3000);
-            }
+                            chatWindow.scrollTop = chatWindow.scrollHeight;
+                            chatInput.value = '';
+                            return;
+                        }
 
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-            chatInput.value = '';
-            return; // Stop further processing after an SOS
-        }
-        // --- END OF SOS LOGIC ---
+                        // Your original predict call is preserved
+                        const response = await fetch(`${API_BASE_URL}/v1/predict`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: userInput,
+                                userId: user.patientId,
+                                language: currentLanguage
+                            })
+                        });
 
-        const response = await fetch(`${API_BASE_URL}/v1/predict`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: userInput,
-                userId: user.patientId,
-                language: currentLanguage
-            })
-        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP Error: ${response.status}`);
+                        }
 
-        if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status}`);
-        }
+                        const data = await response.json();
+                        chatWindow.removeChild(typingIndicator);
 
-        const data = await response.json();
-        chatWindow.removeChild(typingIndicator);
-        await enhancedChatbot.handleChatbotResponse(data);
+                        // Use enhanced chatbot handler
+                        await enhancedChatbot.handleChatbotResponse(data);
 
-    } catch (error) {
-        console.error('Chat Error:', error);
-        chatWindow.removeChild(typingIndicator);
-        
-        // --- CHANGE #2: Use the class method for the error message ---
-        enhancedChatbot.displayMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
-    }
-});
+                    } catch (error) {
+                        console.error('Chat Error:', error);
+                        chatWindow.removeChild(typingIndicator);
+                        addMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
+                    }
+                });
 
                 // The rest of your function is also preserved
-                
+                addMessage("Welcome to Enhanced Sehat Sahara! I can help with appointments, prescriptions, medicine reminders, and health guidance.", "bot");
 
                 checkMedicineReminders();
                 
