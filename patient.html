@@ -32,6 +32,33 @@
             --primary-color: var(--primary-color-dark);
             --color-secondary: #334155;
             --shadow-color: rgba(0, 0, 0, 0.2);
+            /* --- START: Add these Chat Message Dark Mode Fixes --- */
+            .chat-message.bot-message {
+                background-color: #475569; /* Lighter grey for bot messages */
+                color: #e2e8f0; /* Ensure text is light */
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Optional: Slightly enhance shadow */
+            }
+
+            .chat-message.user-message {
+                background-color: #14b8a6; /* Keep primary color or adjust slightly if needed */
+                color: #ffffff; /* Ensure user message text is white */
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Optional: Slightly enhance shadow */
+            }
+
+            .chat-window {
+                 background-color: #1e293b; /* Slightly darker chat window background */
+            }
+             /* Ensure input fields have good contrast */
+            .form-control, #chatInput {
+                 background-color: #334155;
+                 color: #e2e8f0;
+                 border: 1px solid #475569;
+            }
+            .form-control::placeholder, #chatInput::placeholder {
+                 color: #94a3b8;
+            }
+            /* --- END: Add these Chat Message Dark Mode Fixes --- */
+        }
         }
 
         html { scroll-behavior: smooth; }
