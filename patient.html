@@ -2380,6 +2380,8 @@ function showTrackingModal(orderId) {
                 }
 
                 const orderData = {
+                    // --- FIX: ADD THE PATIENT'S ID TO THE REQUEST ---
+                    userId: user.patientId,
                     pharmacyId: selectedPharmacy.id, // The backend expects pharmacyId
                     items: medicineCart.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
                     deliveryAddress: document.getElementById('deliveryAddress').value.trim(),
@@ -3338,10 +3340,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 addMessage("Welcome to Enhanced Sehat Sahara! I can help with appointments, prescriptions, medicine reminders, and health guidance.", "bot");
 
                 checkMedicineReminders();
-                //loadPrescriptionReminders();
-                setTimeout(() => {
-                    showAllPrescriptionSources();
-                }, 2000);
+                
                 testPrescriptionEndpoint();
             }
 
