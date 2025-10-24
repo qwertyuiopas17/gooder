@@ -1569,31 +1569,44 @@ async function triggerSos(user) {
 
             // In patient.html, add this new function inside the main script area
 
-    async function loadChatHistory() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/v1/history`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.patientId, limit: 50 })
-            });
-            const data = await response.json();
-            if (data.success && data.history) {
-                const chatWindow = document.getElementById('chatWindow');
-                chatWindow.innerHTML = ''; // Clear the welcome message
-                data.history.forEach(turn => {
-                    let content = turn.content;
-                    if (turn.role === 'assistant') {
-                        try {
-                            content = JSON.parse(turn.content).response;
-                        } catch (e) { /* It's just a string, use as is */ }
+    // Replace your entire loadChatHistory function with this one.
+
+async function loadChatHistory() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/history`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.patientId, limit: 50 })
+        });
+        const data = await response.json();
+        if (data.success && data.history) {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.innerHTML = ''; // Clear the welcome message
+
+            data.history.forEach(turn => {
+                let messageToDisplay = turn.content;
+                // The backend stores the bot's response as a JSON string.
+                // We need to parse it to get the actual message text.
+                if (turn.role === 'assistant') {
+                    try {
+                        // Safely parse the JSON and get the 'response' text
+                        const botResponseObject = JSON.parse(turn.content);
+                        messageToDisplay = botResponseObject.response;
+                    } catch (e) {
+                        // If it's not valid JSON, it's probably an old, simple message. Display it as is.
+                        messageToDisplay = turn.content;
                     }
-                    enhancedChatbot.displayMessage(content, turn.role);
-                });
-            }
-        } catch (error) {
-            console.error('Failed to load chat history:', error);
+                }
+                // Use the single, reliable displayMessage function
+                if (messageToDisplay) { // Only display if there's content
+                    enhancedChatbot.displayMessage(messageToDisplay, turn.role);
+                }
+            });
         }
+    } catch (error) {
+        console.error('Failed to load chat history:', error);
     }
+}
             async function loadDoctors() {
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/doctors`);
@@ -2681,53 +2694,23 @@ function showTrackingModal(orderId) {
 
                 // In patient.html, inside the SmartSehatSaharaChatbot class
 
+// Also inside the SmartSehatSaharaChatbot class,
+// replace the handleChatbotResponse function with this version.
+
 async handleChatbotResponse(response) {
     this.displayMessage(response.response, 'bot');
-    this.clearButtons(); // Always clear old buttons first
+    this.clearButtons();
 
-    if (response.action === 'BOOKING_SUCCESS') {
-        await generateAppointments();
+    // --- THIS IS THE KEY CHANGE ---
+    // After displaying the message, execute the action.
+    if (response.action) {
+        await this.handleAction(response.action, response.parameters);
     }
+    // --- END OF CHANGE ---
 
-    // Priority 1: The ideal case where the AI correctly provides the buttons.
     if (response.interactive_buttons && response.interactive_buttons.length > 0) {
         this.showInteractiveButtons(response.interactive_buttons);
-        return; // Buttons are shown, our job is done.
-    }
-
-    // --- NEW FALLBACK LOGIC ---
-    // Priority 2: If the AI failed to create buttons but the backend INTENDED for it to,
-    // we will create them manually here. We know the intent because the action is 'SHOW_GUIDANCE'.
-    if (response.action === 'SHOW_GUIDANCE') {
-        const contextualButtons = [];
-        // The backend also sends the original intent, which we can use here.
-        const intent = response.intent;
-
-        if (intent === 'medicine_scan' || intent === 'how_to_medicine_scan') {
-            contextualButtons.push({
-                text: '📷 Open Scanner',
-                action: 'START_MEDICINE_SCANNER',
-                parameters: {},
-                style: 'primary'
-            });
-        } else if (intent === 'prescription_upload' || intent === 'how_to_prescription_upload' || intent === 'prescription_inquiry') {
-            contextualButtons.push({
-                text: '📤 Upload Prescription',
-                action: 'UPLOAD_PRESCRIPTION',
-                parameters: {},
-                style: 'primary'
-            });
-        }
-
-        if (contextualButtons.length > 0) {
-            this.showInteractiveButtons(contextualButtons);
-            return; // Fallback buttons are shown, our job is done.
-        }
-    }
-    // --- END OF NEW FALLBACK LOGIC ---
-
-    // Priority 3 (Final Fallback): If it's just a general inquiry, show the main help buttons.
-    if (response.intent === 'general_inquiry') {
+    } else if (response.intent === 'general_inquiry') {
         this.showGeneralHelpButtons();
     }
 }
@@ -2735,28 +2718,17 @@ async handleChatbotResponse(response) {
 
                 // In patient.html, inside the SmartSehatSaharaChatbot class
 
-                async handleButtonClick(button) {
-    console.log('Button clicked:', button.action, button.text, button.parameters);
+                // Inside the SmartSehatSaharaChatbot class in patient.html
 
-    // Define actions that should continue the conversation in the chat window
-    const conversationalActions = [
-        'SELECT_SPECIALTY', 'SELECT_DOCTOR', 'SELECT_DATE', 
-        'SELECT_TIME', 'SELECT_MODE'
-    ];
+// Replace your old handleButtonClick function with these two new ones.
 
-    if (conversationalActions.includes(button.action)) {
-        // For conversational actions, send the selection back to the backend
-        // This simulates the user typing their choice.
-        this.displayMessage(button.text, 'user'); // Show the user's choice immediately
-        this.clearButtons(); // Remove buttons after selection
-
-        // Send a request to the backend with the button's action and parameters
-        await this.sendPredictRequest(button.text, button.action, button.parameters);
-        return; // Stop further processing
-    }
-
-    // Handle simple NAVIGATION actions as before.
-    switch (button.action) {
+async handleAction(action, parameters) {
+    // This function decides what to do based on the 'action' from the backend.
+    switch (action) {
+        case 'EXECUTE_BOOKING':
+            // This is the new logic that was missing.
+            await this.executeBookingFromChat(parameters);
+            break;
         case 'START_MEDICINE_SCANNER':
         case 'SCAN_MEDICINE':
             showScreen('scanMedicineScreen');
@@ -2764,21 +2736,41 @@ async handleChatbotResponse(response) {
         case 'UPLOAD_PRESCRIPTION':
             document.getElementById('uploadPrescriptionModal').classList.add('active');
             break;
+        case 'BOOKING_SUCCESS':
+            // After a successful booking, refresh the appointments list on the other screen.
+            await generateAppointments();
+            break;
         default:
-            console.warn(`Unhandled navigation action: ${button.action}`);
+            console.warn(`Unhandled action from backend: ${action}`);
             break;
     }
+}
 
-    // Log the click in the background (no changes needed here).
+async executeBookingFromChat(parameters) {
+    // This function makes the final API call to the /v1/book-doctor endpoint.
+    this.displayMessage("Finalizing your booking details now...", 'bot');
     try {
-        await fetch(`${API_BASE_URL}/v1/button-action`, {
+        const response = await fetch(`${API_BASE_URL}/v1/book-doctor`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.patientId, buttonAction: button.action })
+            body: JSON.stringify({
+                userId: user.patientId,
+                doctorId: parameters.doctorId,
+                appointmentDatetime: parameters.appointmentDatetime,
+                appointmentType: parameters.appointmentType,
+                chiefComplaint: parameters.chiefComplaint
+            })
         });
-    } catch (error) { console.error('Button action API error:', error); }
-
-    this.clearButtons();
+        const data = await response.json();
+        if (data.success) {
+            this.displayMessage("✅ All set! Your appointment has been booked. You can see it in the 'Appointments' section.", 'bot');
+        } else {
+            this.displayMessage(`❌ Sorry, there was an error: ${data.message}`, 'bot');
+        }
+    } catch (e) {
+        console.error('Booking execution error:', e);
+        this.displayMessage('❌ There was a network problem while trying to confirm the booking. Please try again.', 'bot');
+    }
 }
 // Add this new helper function inside the SmartSehatSaharaChatbot class
 async sendPredictRequest(message, buttonAction = null, parameters = null) {
@@ -3180,17 +3172,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
 
             
 
-            // --- FIX START ---
-            // The addMessage function is moved here, to a higher scope, so the event listener can find it.
-            const chatWindow = document.getElementById('chatWindow');
-            const addMessage = (text, sender) => {
-                const msgEl = document.createElement('div');
-                msgEl.classList.add('chat-message', `${sender}-message`);
-                msgEl.textContent = text;
-                chatWindow.appendChild(msgEl);
-                chatWindow.scrollTop = chatWindow.scrollHeight;
-            };
-            // --- FIX END ---
+            
 
             function setupChatbot() {
                 
@@ -3268,10 +3250,11 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                     if (!userInput) return;
 
                     // Store the last user message for contextual button generation
-                    enhancedChatbot.lastUserMessage = userInput;
+                    // --- CHANGE THIS LINE ---
+                    enhancedChatbot.displayMessage(userInput, 'user'); // Use the class method
 
                     console.log('Frontend: Sending message:', userInput, 'userId:', user.patientId);
-                    addMessage(userInput, 'user'); // This call now works
+                    
                     chatInput.value = '';
 
                     const typingIndicator = document.createElement('div');
