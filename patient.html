@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sehat Sahara - Patient Dashboard</title>
@@ -1467,6 +1468,7 @@
         const API_BASE_URL = '/api';
                     // SOS Countdown Function
 let sosCountdownInterval;
+
 function startSosCountdown(user) {
     document.getElementById('sosCountdownModal').classList.add('active');
     let countdown = 5;
@@ -1550,6 +1552,53 @@ async function triggerSos(user) {
 
         document.addEventListener('DOMContentLoaded', async function() {
             let user = null, currentLanguage = 'en', bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
+            // *** ADD SOCKET.IO INITIALIZATION ***
+    let socket = null; // Initialize socket variable
+
+    function connectSocket() {
+        if (socket && socket.connected) return; // Already connected
+
+        console.log("Attempting to connect WebSocket to:", SOCKET_URL);
+        socket = io(SOCKET_URL, {
+            transports: ['websocket'],
+            reconnectionAttempts: 5,
+            timeout: 10000
+        });
+
+        socket.on('connect', () => {
+            console.log('WebSocket connected:', socket.id);
+            // Re-join room if reconnecting during an active call
+            if (isCallActive && currentAppointmentId) {
+                joinCallRoom();
+            }
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.warn('WebSocket disconnected:', reason);
+            // Optionally show a disconnected status to the user
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('WebSocket connection error:', error);
+            // Optionally show an error message
+        });
+
+        // *** LISTEN FOR INCOMING SIGNALS ***
+        socket.on('signal', (message) => {
+            if (!isCallActive || message.appointmentId !== currentAppointmentId) {
+                 console.log("Ignoring signal for inactive/different call");
+                 return;
+            }
+            console.log(`Received signal type: ${message.type} for appointment ${message.appointmentId}`);
+            handleSignalingMessage(message.type, message.data); // Your existing handler
+        });
+
+        // Optional: Listen for other users joining/leaving
+        socket.on('user_joined', (data) => console.log('User joined call:', data.userId));
+        socket.on('user_left', (data) => console.log('User left call:', data.userId));
+    }
+    // Call connectSocket early, maybe in initializeApp or after checkAuth
+    // connectSocket(); // Example placement
 
             const translations = {
                 en: { welcome_message: "Welcome, {name}", welcome_subtitle: "Your health dashboard is ready.", next_appointment: "Next Appointment", new_prescriptions: "New Prescriptions", from_last_visit: "From past visits", home_nav: "Home", appointments_nav: "Appointments", records_nav: "Records", book_nav: "Book", more_nav: "More", appointments_title: "My Appointments", records_title: "Digital Health Record", book_title: "Book a Consultation", more_title: "More Options", prescriptions_title: "My Prescriptions", scan_medicine: "Scan Medicine", book_medicine: "Book Medicine", health_chatbot: "Health Chatbot", scan_medicine_title: "Scan Medicine", book_medicine_title: "Book Medicine", health_chatbot_title: "Health Assistant", select_pharmacy: "Select a Pharmacy"},
@@ -3443,47 +3492,86 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
             let retryDelay = 1000; // Start with 1 second
 
             // Enhanced WebRTC configuration with multiple STUN/TURN servers
+            // In patient.html AND doctor.html (inside the main <script> tag)
+
+            // In patient.html AND doctor.html (inside the main <script> tag)
+
             const configuration = {
                 iceServers: [
-                    // STUN servers for NAT traversal
+                    // --- Use Metered.ca Credentials Here ---
+                    {
+                        urls: "stun:stun.relay.metered.ca:80", // STUN URL from Metered example
+                        // No username/credential needed for STUN
+                    },
+                    {
+                        urls: "turn:turn.relay.metered.ca:80", // TURN URL from Metered example
+                        username: "bad7e3afb25a1c67f9781480",   // <- Your Username from image_cabf62
+                        credential: "4UO/bbQJNvTD82hu"           // <- Your Password from image_cabf62
+                    },
+                    {
+                        urls: "turn:turn.relay.metered.ca:80?transport=tcp", // TURN over TCP
+                        username: "bad7e3afb25a1c67f9781480",
+                        credential: "4UO/bbQJNvTD82hu"
+                    },
+                    {
+                        urls: "turn:turn.relay.metered.ca:443", // TURN over default secure port
+                        username: "bad7e3afb25a1c67f9781480",
+                        credential: "4UO/bbQJNvTD82hu"
+                    },
+                    {
+                        urls: "turns:turns.relay.metered.ca:443?transport=tcp", // Secure TURN over TCP
+                        username: "bad7e3afb25a1c67f9781480",
+                        credential: "4UO/bbQJNvTD82hu"
+                    },
+                    // --- End Metered.ca ---
+
+                    // --- Keep Google STUN as fallbacks ---
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-
-                    // TURN servers for fallback when STUN fails
-                    {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
+                    // ... (add others if you like) ...
+                    // --- End Google STUN ---
                 ],
                 iceCandidatePoolSize: 10,
                 bundlePolicy: 'max-bundle',
                 rtcpMuxPolicy: 'require'
             };
+            // *** MODIFY showCallScreen FUNCTION ***
+    // patient.html AND doctor.html
 
-            function showCallScreen(doctorName, appointmentId) {
-                currentAppointmentId = appointmentId;
-                document.getElementById('callWithDoctor').textContent = `Consultation with ${doctorName}`;
-                document.getElementById('callScreen').classList.add('active');
+function showCallScreen(peerName, appointmentId) {
+    currentAppointmentId = appointmentId;
 
-                // Hide any existing connection status when showing call screen
-                hideConnectionStatus();
+    // Determine correct element IDs based on role (patient vs doctor)
+    const headerElementId = user ? 'callWithDoctor' : 'consultationHeader';
+    const screenElementId = user ? 'callScreen' : 'consultationScreen';
 
-                initializeWebRTC();
-            }
+    // Set header text
+    const headerEl = document.getElementById(headerElementId);
+    if (headerEl) {
+        headerEl.textContent = `Consultation with ${peerName}`;
+    } else {
+         console.error(`Header element #${headerElementId} not found!`);
+    }
+
+
+    // Show the correct screen
+    const screenEl = document.getElementById(screenElementId);
+     if (screenEl) {
+         // Ensure other screens are hidden first (using your existing showScreen logic is better if available)
+         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+         screenEl.classList.add('active');
+    } else {
+         console.error(`Screen element #${screenElementId} not found!`);
+         return; // Don't proceed if screen doesn't exist
+    }
+
+    hideConnectionStatus(); // Hide any previous status messages
+
+    // *** JOIN WEBSOCKET ROOM ***
+    joinCallRoom(); // Call the helper function to join the signaling room
+
+    initializeWebRTC(); // Initialize WebRTC *after* attempting to join room
+}
 
             async function initializeWebRTC() {
                 try {
@@ -3719,13 +3807,17 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         }
                     };
 
-                    // Handle ICE candidates
-                    peerConnection.onicecandidate = event => {
-                        if (event.candidate) {
-                            console.log('Sending ICE candidate');
-                            sendSignalingMessage('ice', event.candidate);
-                        }
-                    };
+                    // *** START: REPLACE/UPDATE onicecandidate HANDLER ***
+        // Handle ICE candidates: Send them immediately via WebSocket
+        peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+                // Send the candidate using the WebSocket signaling function
+                sendSignalingMessage('ice', event.candidate);
+            } else {
+                console.log("All ICE candidates have been gathered.");
+            }
+        };
+        // *** END: REPLACE/UPDATE onicecandidate HANDLER ***
 
                     // Create data channel for messaging
                     try {
@@ -3960,22 +4052,31 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                                 }, 2000);
                             }
                         }
-                    } else if (type === 'ice') {
-                        console.log('Patient: Received ICE candidate');
-                        const candidate = new RTCIceCandidate(data);
+                    // *** START: REPLACE/UPDATE 'ice' HANDLING ***
+                    }else if (type === 'ice') {
+             console.log(`${role}: Received ICE candidate`);
+             const candidate = new RTCIceCandidate(data);
 
-                        if (peerConnection.remoteDescription) {
-                            try {
-                                await peerConnection.addIceCandidate(candidate);
-                                console.log('Patient: ICE candidate added successfully');
-                            } catch (error) {
-                                console.warn('Patient: Failed to add ICE candidate:', error);
-                            }
-                        } else {
-                            console.log('Patient: Queueing ICE candidate (no remote description yet)');
-                            iceCandidateQueue.push(candidate);
-                        }
-                    }
+             // Add candidate only if remote description is set, otherwise queue it
+             if (peerConnection.remoteDescription) {
+                 try {
+                     await peerConnection.addIceCandidate(candidate);
+                     // console.log(`${role}: ICE candidate added successfully`); // Optional: reduce log noise
+                 } catch (error) {
+                     // Ignore benign errors like adding duplicates or candidates for closed connections
+                     if (!error.message.includes("Cannot add ICE candidate") && !error.message.includes("closed")) {
+                         console.warn(`${role}: Failed to add ICE candidate:`, error);
+                     }
+                 }
+             } else {
+                 console.log(`${role}: Queueing ICE candidate (no remote description yet)`);
+                 iceCandidateQueue.push(candidate); // Use the existing queue
+             }
+        }
+        else {
+            console.warn(`${role}: Received unknown signal type: ${type}`);
+        }
+        // *** END: REPLACE/UPDATE 'ice' HANDLING ***
                 } catch (error) {
                     console.error('Patient: Error handling signaling message:', error);
                     console.error('Patient: Signaling state:', peerConnection?.signalingState);
@@ -4007,21 +4108,45 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 console.log('Patient: Connection reset complete');
             }
 
-            function sendSignalingMessage(type, data) {
-                console.log(`Patient: Sending ${type} via signaling`);
-                fetch(`${API_BASE_URL}/v1/webrtc/${type}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
-                }).catch(error => {
-                    console.error('Patient: Signaling error:', error);
-                    // Retry signaling after a short delay
-                    setTimeout(() => {
-                        console.log(`Patient: Retrying ${type} signaling`);
-                        sendSignalingMessage(type, data);
-                    }, 2000);
-                });
-            }
+           // *** MODIFY sendSignalingMessage FUNCTION ***
+    function sendSignalingMessage(type, data) {
+        if (!socket || !socket.connected) {
+            console.error(`Cannot send signal '${type}', WebSocket not connected.`);
+            // Optionally queue the message or show an error
+            return;
+        }
+        if (!currentAppointmentId) {
+            console.error(`Cannot send signal '${type}', currentAppointmentId is not set.`);
+            return;
+        }
+        console.log(`Sending signal type: ${type} for appointment ${currentAppointmentId}`);
+        const payload = {
+            appointmentId: currentAppointmentId,
+            type: type,
+            data: data
+        };
+        socket.emit('signal', payload); // Use socket.emit instead of fetch
+    }
+
+    // *** ADD FUNCTION TO JOIN/LEAVE ROOMS ***
+    function joinCallRoom() {
+        if (socket && socket.connected && currentAppointmentId) {
+            console.log(`Joining call room: ${currentAppointmentId}`);
+            // Determine user identifier based on context (patient.html vs doctor.html)
+            const userIdIdentifier = user ? user.patientId : (doctor ? doctor.doctorId : 'unknown');
+            socket.emit('join_call', { appointmentId: currentAppointmentId, userId: userIdIdentifier });
+        } else {
+             console.warn("Cannot join room: Socket not connected or appointmentId missing.");
+        }
+    }
+
+    function leaveCallRoom() {
+        if (socket && socket.connected && currentAppointmentId) {
+            console.log(`Leaving call room: ${currentAppointmentId}`);
+            const userIdIdentifier = user ? user.patientId : (doctor ? doctor.doctorId : 'unknown');
+            socket.emit('leave_call', { appointmentId: currentAppointmentId, userId: userIdIdentifier });
+        }
+    }
 
             async function sendSignalingMessageWithRetry(type, data) {
                 return new Promise((resolve, reject) => {
@@ -4171,81 +4296,84 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 }
             }
 
-            function endCall() {
-                try {
-                    console.log('Ending call...');
+            // patient.html AND doctor.html
+function endCall() {
+    try {
+        console.log('Ending call...');
+        leaveCallRoom(); // *** LEAVE WEBSOCKET ROOM ***
 
-                    // Stop local media tracks
-                    if (localStream) {
-                        localStream.getTracks().forEach(track => {
-                            console.log('Stopping track:', track.kind);
-                            track.stop();
-                        });
-                        localStream = null;
-                    }
+        // Stop local media tracks
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        // Close peer connection
+        if (peerConnection) {
+            // Remove listeners before closing to prevent errors
+            peerConnection.onicecandidate = null;
+            peerConnection.ontrack = null;
+            peerConnection.oniceconnectionstatechange = null;
+            peerConnection.onconnectionstatechange = null;
+            peerConnection.ondatachannel = null;
+            peerConnection.onsignalingstatechange = null;
+            peerConnection.close();
+            peerConnection = null;
+        }
+        // Close data channel
+        if (dataChannel) {
+            dataChannel.onmessage = null;
+            dataChannel.onopen = null;
+            dataChannel.onclose = null;
+            dataChannel.close();
+            dataChannel = null;
+        }
 
-                    // Close peer connection
-                    if (peerConnection) {
-                        peerConnection.close();
-                        peerConnection = null;
-                    }
+        // Reset UI elements (adjust element IDs for patient vs doctor)
+        const screenElementId = user ? 'callScreen' : 'consultationScreen';
+        const callScreen = document.getElementById(screenElementId);
+        if (callScreen) callScreen.classList.remove('active');
 
-                    // Close data channel
-                    if (dataChannel) {
-                        dataChannel.close();
-                        dataChannel = null;
-                    }
+        const remoteVideo = document.getElementById('remoteVideo');
+        if (remoteVideo) remoteVideo.srcObject = null;
+        const localVideo = document.getElementById('localVideo');
+        if (localVideo) localVideo.srcObject = null;
+        const messages = document.getElementById('messages'); // patient.html only? adjust if needed
+        if (messages) messages.innerHTML = '';
+        const startCallBtn = document.getElementById('startCallBtn');
+        if (startCallBtn) {
+             startCallBtn.disabled = false;
+             startCallBtn.textContent = 'Start Call';
+        }
+         // Reset mute buttons
+        const muteAudioBtn = document.getElementById('muteAudioBtn'); // patient.html only?
+        if (muteAudioBtn) muteAudioBtn.textContent = 'Mute Audio';
+        const muteVideoBtn = document.getElementById('muteVideoBtn'); // patient.html only?
+        if (muteVideoBtn) muteVideoBtn.textContent = 'Mute Video';
 
-                    // Reset UI
-                    const callScreen = document.getElementById('callScreen');
-                    if (callScreen) {
-                        callScreen.classList.remove('active');
-                    }
 
-                    const remoteVideo = document.getElementById('remoteVideo');
-                    if (remoteVideo) {
-                        remoteVideo.srcObject = null;
-                    }
+        // Reset state variables
+        // currentAppointmentId = null; // Keep this commented if you want to allow rejoining easily
+        isCallActive = false; // Set call inactive
+        iceCandidateQueue = [];
+        isInitiator = false;
+        retryCount = 0;
+        retryDelay = 1000;
+        isAudioMuted = false;
+        isVideoMuted = false;
 
-                    const localVideo = document.getElementById('localVideo');
-                    if (localVideo) {
-                        localVideo.srcObject = null;
-                    }
 
-                    const messages = document.getElementById('messages');
-                    if (messages) {
-                        messages.innerHTML = '';
-                    }
+        hideConnectionStatus();
 
-                    const startCallBtn = document.getElementById('startCallBtn');
-                    if (startCallBtn) {
-                        startCallBtn.disabled = false;
-                        startCallBtn.textContent = 'Start Call';
-                    }
+        // Go back to the appropriate screen after call ends
+        if(user) showScreen('appointmentsScreen'); // patient.html
+        if(doctor) showScreen('dashboardScreen'); // doctor.html
 
-                    // Reset state
-                    currentAppointmentId = null;
-                    isCallActive = false;
-                    iceCandidateQueue = [];
-                    offerQueue = [];
-                    isInitiator = false;
-                    retryCount = 0;
-                    retryDelay = 1000;
 
-                    // Hide connection status when call ends
-                    hideConnectionStatus();
-
-                    // Reset UI - reuse the existing variable from earlier in the function
-                    if (startCallBtn) {
-                        startCallBtn.disabled = false;
-                        startCallBtn.textContent = 'Start Call';
-                    }
-
-                    console.log('Call ended successfully');
-                } catch (error) {
-                    console.error('Error ending call:', error);
-                }
-            }
+        console.log('Call ended successfully');
+    } catch (error) {
+        console.error('Error ending call:', error);
+    }
+}
 
             function sendMessage() {
                 const input = document.getElementById('messageInput');
@@ -4374,8 +4502,6 @@ Possible solutions:
                     if (e.key === 'Enter') sendMessage();
                 });
 
-                // Poll for signaling messages
-                setInterval(pollSignaling, 1000);
 
                 // Test function for debugging WebRTC issues
                 function testWebRTCConnection() {
@@ -4413,71 +4539,39 @@ Possible solutions:
                 });
             }
 
+            // Medicine Reminder Functions
             async function checkMedicineReminders() {
-        try {
-            console.log("checkMedicineReminders: Fetching reminders for user:", user.patientId); // Log start
-            const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.patientId,
-                    action: 'get'
-                })
-            });
+                try {
+                    const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: user.patientId,
+                            action: 'get'
+                        })
+                    });
 
-            // --- START: Add Detailed Logging ---
-            if (!response.ok) {
-                console.error("checkMedicineReminders: Fetch failed with status:", response.status);
-                const errorText = await response.text();
-                console.error("checkMedicineReminders: Error response body:", errorText);
-                throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (data.success) {
+                        updateRemindersDisplay(data.reminders, data.pending_alerts);
+                    }
+                } catch (error) {
+                    console.error('Medicine reminders check error:', error);
+                }
             }
-
-            const data = await response.json();
-            console.log("checkMedicineReminders: Received data:", data); // Log the full response
-
-            if (data.success) {
-                // Log the arrays directly before passing them
-                console.log("checkMedicineReminders: Reminders array:", data.reminders);
-                console.log("checkMedicineReminders: Alerts array:", data.pending_alerts);
-                updateRemindersDisplay(data.reminders || [], data.pending_alerts || []); // Ensure arrays are passed
-            } else {
-                console.error("checkMedicineReminders: Backend indicated failure:", data.message || "Unknown error");
-            }
-            // --- END: Add Detailed Logging ---
-
-        } catch (error) {
-            // Log the specific error
-            console.error('checkMedicineReminders: Caught error during fetch/processing:', error);
-        }
-    }
 
             function updateRemindersDisplay(reminders, alerts) {
-            // --- START: Add Detailed Logging ---
-            console.log("updateRemindersDisplay: Received reminders count:", reminders ? reminders.length : 'N/A'); // Log count received
-            console.log("updateRemindersDisplay: Received alerts count:", alerts ? alerts.length : 'N/A'); // Log count received
+                // Update home screen counter
+                const pendingEl = document.getElementById('pendingReminders');
+                if (pendingEl) {
+                    pendingEl.textContent = `${alerts.length} Pending`;
+                }
 
-            const pendingEl = document.getElementById('pendingReminders');
-            console.log("updateRemindersDisplay: Found pendingEl:", pendingEl); // Log if the element was found
-
-            if (pendingEl) {
-                const totalActiveReminders = reminders ? reminders.length : 0;
-                console.log("updateRemindersDisplay: Setting text content to:", `${totalActiveReminders} Total Active`); // Log the text being set
-                pendingEl.textContent = `${totalActiveReminders} Total Active`;
-                console.log("updateRemindersDisplay: Text content AFTER setting:", pendingEl.textContent); // Verify it was set
-            } else {
-                console.error("updateRemindersDisplay: Could not find element with ID 'pendingReminders'"); // Error if element is missing
+                // Show alerts in chat if any
+                if (alerts.length > 0 && document.getElementById('chatbotScreen').classList.contains('active')) {
+                    showMedicineAlerts(alerts);
+                }
             }
-            // --- END: Add Detailed Logging ---
-
-            // Show alerts in chat if any (This part remains the same)
-            if (alerts && alerts.length > 0 && document.getElementById('chatbotScreen').classList.contains('active')) {
-                 console.log("updateRemindersDisplay: Showing alerts in chat"); // Log chat alert trigger
-                showMedicineAlerts(alerts);
-            } else {
-                 console.log("updateRemindersDisplay: Not showing alerts in chat (alerts:", alerts ? alerts.length : 'N/A', ", chatbot active:", document.getElementById('chatbotScreen').classList.contains('active'), ")");
-            }
-        }
 
             function showMedicineAlerts(alerts) {
                 const chatWindow = document.getElementById('chatWindow');
@@ -4833,7 +4927,7 @@ Possible solutions:
             // ENHANCED saveMedicineReminder function
             // --- YOUR OTHER EXISTING JAVASCRIPT FUNCTIONS ---
         
-        // In patient.html
+        // This is your correct, fully functional saveMedicineReminder
         async function saveMedicineReminder() {
             const isEdit = currentlyEditing !== null;
             const action = isEdit ? 'update' : 'add';
@@ -4855,9 +4949,8 @@ Possible solutions:
                 medicine_data: {
                     name: medicineName,
                     dosage: dosage,
-                    // Ensure times are correctly parsed into an array
-                    times: times.split(',').map(t => t.trim()).filter(t => t), // Filter empty strings
-                    duration_days: parseInt(duration) || 30, // Default duration if not provided
+                    times: times.split(',').map(t => t.trim()),
+                    duration_days: parseInt(duration),
                     instructions: instructions,
                     timezone: userTimezone
                 }
@@ -4867,55 +4960,25 @@ Possible solutions:
                 payload.original_medicine_name = currentlyEditing;
             }
 
-            // --- Show loading state ---
-            const saveBtn = document.getElementById('saveReminderBtn');
-            const originalBtnText = saveBtn.textContent;
-            saveBtn.textContent = 'Saving...';
-            saveBtn.disabled = true;
-
             try {
-                console.log("Sending reminder save request:", payload); // Log payload
                 const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                if (!response.ok) throw new Error('Failed to save reminder');
 
-                console.log("Reminder save response status:", response.status); // Log status
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'Failed to save reminder' }));
-                    throw new Error(errorData.message || `HTTP ${response.status}`);
-                }
-
-                // --- START: Reordered Refresh Logic ---
-                // 1. Close modal and reset form
                 document.getElementById('medicineReminderModal').classList.remove('active');
                 document.getElementById('medicineReminderForm').reset();
-                currentlyEditing = null; // Reset edit state
-
-                // 2. Show confirmation to the user
+                currentlyEditing = null;
+                document.getElementById('saveReminderBtn').textContent = 'Save Reminder';
+                await loadMedicineRemindersScreen();
+                await checkMedicineReminders();
                 showConfirmationModal('Success', `Medicine reminder ${isEdit ? 'updated' : 'added'}!`);
-
-                // 3. *After* showing confirmation, refresh the data and UI
-                console.log("Reminder saved, now refreshing UI...");
-                await loadMedicineRemindersScreen(); // Refresh the dedicated reminder screen
-                await checkMedicineReminders(); // Refresh homepage counter and chat alerts
-
-                // --- END: Reordered Refresh Logic ---
-
 
             } catch (error) {
                 console.error('Save reminder error:', error);
-                alert(`Failed to save medicine reminder: ${error.message}. Please try again.`);
-            } finally {
-                // --- Reset button state ---
-                saveBtn.textContent = originalBtnText; // Restore original text
-                saveBtn.disabled = false;
-                // Ensure the button text resets correctly if it was an edit
-                if (!isEdit) {
-                   document.getElementById('saveReminderBtn').textContent = 'Save Reminder';
-                }
+                alert('Failed to save medicine reminder. Please try again.');
             }
         }
             // Add these functions inside your <script> tag in patient.html
@@ -5023,19 +5086,23 @@ Possible solutions:
 
             
 
+            // In patient.html, inside the <script> tag
+
             async function initializeApp() {
                 // 1. Check Authentication (Essential First Step)
-                if (!checkAuth()) return; // Stop if not logged in
+                const isAuthenticated = await checkAuth(); // Assuming checkAuth is async
+                if (!isAuthenticated) return; // Stop if not logged in
+
+                // *** CONNECT WEBSOCKET EARLY ***
+                connectSocket(); // Initialize WebSocket connection
 
                 // 2. Setup Service Worker & Push Notifications (Can run early)
                 if ('serviceWorker' in navigator && 'PushManager' in window) {
                     try {
                         await navigator.serviceWorker.register('/sw.js');
                         console.log('Service Worker registered successfully');
-                        // Setup the banner logic (doesn't block other tasks)
-                        setupNotificationBanner();
-                        // Attempt to subscribe/resubscribe (runs in background)
-                        subscribeUser();
+                        setupNotificationBanner(); // Setup banner logic
+                        subscribeUser(); // Attempt to subscribe/resubscribe
                     } catch (error) {
                         console.error('Service Worker registration failed:', error);
                     }
@@ -5043,8 +5110,8 @@ Possible solutions:
                      console.warn('Push notifications are not supported in this browser.');
                 }
 
-                // 3. Load Core Data (Necessary for many UI elements)
-                await loadDoctors();       // Fetch doctor list
+                // 3. Load Core Data (Necessary for patient UI elements)
+                await loadDoctors();       // Fetch doctor list (needed for booking)
                 await loadBookingData();   // Fetch booking categories, slots etc.
 
                 // 4. Setup Basic UI Elements (Theme, Language, Static Nav)
@@ -5052,18 +5119,18 @@ Possible solutions:
                 setupNavigation();         // Make nav buttons clickable
                 setupThemeAndLanguage();   // Setup theme/language toggles
 
-                // 5. Render Initial Screen Content (Depends on Core Data)
+                // 5. Render Initial Screen Content (Patient-Specific)
                 generateTimeline();        // Render health records timeline
                 await generateAppointments(); // Fetch and render appointments list (also updates homepage 'Next Appt')
                 await generateAllPrescriptions(); // Fetch and render prescriptions list
-                await loadDashboard();     // Fetch specific dashboard stats (like prescription count)
+                await loadDashboard();     // Fetch specific dashboard stats (next appt, prescription count)
                 await loadChatHistory();   // Fetch past chat messages
                 generateOrdersList();      // Render past medicine orders list
                 loadAndDisplaySummary();   // Fetch latest prescription summary for chat
                 renderBookingStep(1);      // Setup the first step of the booking screen
 
-                // 6. Setup Interactive Components & Modals
-                setupModalsAndActions();   // Add event listeners for modals, SOS, logout etc.
+                // 6. Setup Interactive Components & Modals (Patient-Specific)
+                setupModalsAndActions();   // Add event listeners for patient modals, SOS, logout etc.
                 setupScanMedicine();       // Initialize camera logic for medicine scan
                 setupBookMedicine();       // Initialize UI logic for booking medicine
                 setupUploadPrescription(); // Initialize camera logic for prescription upload
@@ -5075,6 +5142,7 @@ Possible solutions:
                 console.log("initializeApp: Performing final reminder check...");
                 await checkMedicineReminders(); // <<< Explicitly refresh reminder count AFTER dashboard etc.
 
+                console.log("initializeApp: Performing post-appointment check...");
                 await checkPostAppointmentFollowup(); // Check if follow-up message is needed in chat
 
                 // Optionally add interval here for periodic checks later if desired
@@ -5082,11 +5150,12 @@ Possible solutions:
                 // console.log("Started periodic reminder check.");
 
                 // Load reminders screen content IF that screen is the active one on load
-                if (document.getElementById('medicineRemindersScreen').classList.contains('active')) {
+                const remindersScreen = document.getElementById('medicineRemindersScreen');
+                if (remindersScreen && remindersScreen.classList.contains('active')) {
                     await loadMedicineRemindersScreen();
                 }
 
-                console.log("initializeApp: Initialization complete.");
+                console.log("initializeApp (Patient): Initialization complete.");
             }
 
             // Post-appointment follow-up check

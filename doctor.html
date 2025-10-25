@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <style>
         :root {
             --bg-color: rgba(245, 245, 245, 0.6);
@@ -406,7 +407,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE_URL = 'https://sahara-sathi.onrender.com/v1'; // <-- ADD THIS LINE
+            const API_BASE_URL = '/api';
+            const SOCKET_URL = '/api';
             let doctor = null;
             let currentLanguage = 'en';
             let currentAppointment = null;
@@ -425,48 +427,150 @@
             let maxRetries = 3;
             let retryDelay = 1000; // Start with 1 second
 
+            // *** ADD SOCKET.IO VARIABLES AND FUNCTIONS ***
+    let socket = null;
+
+    function connectSocket() {
+        if (socket && socket.connected) return; // Already connected
+
+        console.log("Attempting to connect WebSocket to:", SOCKET_URL);
+        socket = io(SOCKET_URL, {
+            transports: ['websocket'],
+            reconnectionAttempts: 5,
+            timeout: 10000
+        });
+
+        socket.on('connect', () => {
+            console.log('WebSocket connected:', socket.id);
+            if (isCallActive && currentAppointmentId) {
+                joinCallRoom(); // Re-join if call was active
+            }
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.warn('WebSocket disconnected:', reason);
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('WebSocket connection error:', error);
+            // Optionally show an error to the user
+        });
+
+        // *** Listen for signals from the server ***
+        socket.on('signal', (message) => {
+             if (!isCallActive || !currentAppointmentId || message.appointmentId !== currentAppointmentId) {
+                console.log("Ignoring signal for inactive/different call:", message);
+                return;
+            }
+            console.log(`Received signal type: ${message.type} for appointment ${message.appointmentId}`);
+            handleSignalingMessage(message.type, message.data); // Your existing WebRTC handler
+        });
+
+        socket.on('user_joined', (data) => console.log('User joined call:', data.userId));
+        socket.on('user_left', (data) => console.log('User left call:', data.userId));
+    }
+
+    function joinCallRoom() {
+        if (socket && socket.connected && currentAppointmentId) {
+            const userIdIdentifier = user ? user.patientId : (doctor ? doctor.doctorId : 'unknown');
+            console.log(`Joining call room: call_${currentAppointmentId} as ${userIdIdentifier}`);
+            socket.emit('join_call', { appointmentId: currentAppointmentId, userId: userIdIdentifier });
+        } else {
+             console.warn("Cannot join room: Socket not connected or appointmentId missing.");
+             // Maybe try connecting again if socket is null?
+             // if (!socket) connectSocket();
+        }
+    }
+
+    function leaveCallRoom() {
+        if (socket && socket.connected && currentAppointmentId) {
+            const userIdIdentifier = user ? user.patientId : (doctor ? doctor.doctorId : 'unknown');
+            console.log(`Leaving call room: call_${currentAppointmentId} as ${userIdIdentifier}`);
+            socket.emit('leave_call', { appointmentId: currentAppointmentId, userId: userIdIdentifier });
+        }
+    }
+    // *** END SOCKET.IO ADDITIONS ***
+
             // Enhanced WebRTC configuration with multiple STUN/TURN servers
+            // In patient.html AND doctor.html (inside the main <script> tag)
+
             const configuration = {
                 iceServers: [
-                    // STUN servers for NAT traversal
+                    // --- Use Metered.ca Credentials Here ---
+                    {
+                        urls: "stun:stun.relay.metered.ca:80", // STUN URL from Metered example
+                        // No username/credential needed for STUN
+                    },
+                    {
+                        urls: "turn:turn.relay.metered.ca:80", // TURN URL from Metered example
+                        username: "bad7e3afb25a1c67f9781480",   // <- Your Username from image_cabf62
+                        credential: "4UO/bbQJNvTD82hu"           // <- Your Password from image_cabf62
+                    },
+                    {
+                        urls: "turn:turn.relay.metered.ca:80?transport=tcp", // TURN over TCP
+                        username: "bad7e3afb25a1c67f9781480",
+                        credential: "4UO/bbQJNvTD82hu"
+                    },
+                    {
+                        urls: "turn:turn.relay.metered.ca:443", // TURN over default secure port
+                        username: "bad7e3afb25a1c67f9781480",
+                        credential: "4UO/bbQJNvTD82hu"
+                    },
+                    {
+                        urls: "turns:turns.relay.metered.ca:443?transport=tcp", // Secure TURN over TCP
+                        username: "bad7e3afb25a1c67f9781480",
+                        credential: "4UO/bbQJNvTD82hu"
+                    },
+                    // --- End Metered.ca ---
+
+                    // --- Keep Google STUN as fallbacks ---
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-
-                    // TURN servers for fallback when STUN fails
-                    {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
+                    // ... (add others if you like) ...
+                    // --- End Google STUN ---
                 ],
                 iceCandidatePoolSize: 10,
                 bundlePolicy: 'max-bundle',
                 rtcpMuxPolicy: 'require'
             };
 
-            function showCallScreen(patientName, appointmentId) {
-                currentAppointmentId = appointmentId;
-                document.getElementById('consultationHeader').textContent = `Consultation with ${patientName}`;
-                showScreen('consultationScreen');
+            // patient.html AND doctor.html
+// patient.html AND doctor.html
 
-                // Hide any existing connection status when showing call screen
-                hideConnectionStatus();
+function showCallScreen(peerName, appointmentId) {
+    currentAppointmentId = appointmentId;
 
-                initializeWebRTC();
-            }
+    // Determine correct element IDs based on role (patient vs doctor)
+    const headerElementId = user ? 'callWithDoctor' : 'consultationHeader';
+    const screenElementId = user ? 'callScreen' : 'consultationScreen';
+
+    // Set header text
+    const headerEl = document.getElementById(headerElementId);
+    if (headerEl) {
+        headerEl.textContent = `Consultation with ${peerName}`;
+    } else {
+         console.error(`Header element #${headerElementId} not found!`);
+    }
+
+
+    // Show the correct screen
+    const screenEl = document.getElementById(screenElementId);
+     if (screenEl) {
+         // Ensure other screens are hidden first (using your existing showScreen logic is better if available)
+         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+         screenEl.classList.add('active');
+    } else {
+         console.error(`Screen element #${screenElementId} not found!`);
+         return; // Don't proceed if screen doesn't exist
+    }
+
+    hideConnectionStatus(); // Hide any previous status messages
+
+    // *** JOIN WEBSOCKET ROOM ***
+    joinCallRoom(); // Call the helper function to join the signaling room
+
+    initializeWebRTC(); // Initialize WebRTC *after* attempting to join room
+}
 
             async function initializeWebRTC() {
                 try {
@@ -687,11 +791,28 @@
                         };
                     });
 
-                    // Handle ICE candidates
-                    peerConnection.onicecandidate = event => {
-                        if (event.candidate) {
-                            console.log('Doctor: Sending ICE candidate');
-                            sendSignalingMessage('ice', event.candidate);
+                    // Handle ICE candidates: Send them immediately via WebSocket
+        // In doctor.html, inside createPeerConnection function
+
+                    // Handle ICE connection state changes
+                    peerConnection.oniceconnectionstatechange = () => {
+                        console.log('Doctor: ICE connection state:', peerConnection.iceConnectionState);
+                        if (peerConnection.iceConnectionState === 'failed') {
+                            console.error('Doctor: ICE connection failed. Attempting ICE restart...');
+                            showConnectionStatus('Connection lost, attempting reconnect (ICE Restart)...', 'warning');
+                            // *** ADD ICE RESTART LOGIC ***
+                            if (isInitiator) { // Only initiator restarts for simplicity
+                                peerConnection.restartIce();
+                            } else {
+                                console.log("Doctor: ICE failed, but not initiator. Waiting.");
+                            }
+                        } else if (peerConnection.iceConnectionState === 'disconnected') {
+                            console.log('Doctor: ICE connection disconnected. Might recover.');
+                            showConnectionStatus('Connection temporarily interrupted...', 'warning');
+                        } else if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
+                             console.log('Doctor: ICE connection established or completed.');
+                        } else if (peerConnection.iceConnectionState === 'closed') {
+                             console.log('Doctor: ICE connection closed.');
                         }
                     };
 
@@ -804,22 +925,31 @@
                                 }, 2000);
                             }
                         }
-                    } else if (type === 'ice') {
-                        console.log('Doctor: Received ICE candidate');
-                        const candidate = new RTCIceCandidate(data);
+                    } // *** START: REPLACE/UPDATE 'ice' HANDLING ***
+        else if (type === 'ice') {
+             console.log(`${role}: Received ICE candidate`);
+             const candidate = new RTCIceCandidate(data);
 
-                        if (peerConnection.remoteDescription) {
-                            try {
-                                await peerConnection.addIceCandidate(candidate);
-                                console.log('Doctor: ICE candidate added successfully');
-                            } catch (error) {
-                                console.warn('Doctor: Failed to add ICE candidate:', error);
-                            }
-                        } else {
-                            console.log('Doctor: Queueing ICE candidate (no remote description yet)');
-                            iceCandidateQueue.push(candidate);
-                        }
-                    }
+             // Add candidate only if remote description is set, otherwise queue it
+             if (peerConnection.remoteDescription) {
+                 try {
+                     await peerConnection.addIceCandidate(candidate);
+                     // console.log(`${role}: ICE candidate added successfully`); // Optional: reduce log noise
+                 } catch (error) {
+                     // Ignore benign errors like adding duplicates or candidates for closed connections
+                     if (!error.message.includes("Cannot add ICE candidate") && !error.message.includes("closed")) {
+                         console.warn(`${role}: Failed to add ICE candidate:`, error);
+                     }
+                 }
+             } else {
+                 console.log(`${role}: Queueing ICE candidate (no remote description yet)`);
+                 iceCandidateQueue.push(candidate); // Use the existing queue
+             }
+        }
+        // *** END: REPLACE/UPDATE 'ice' HANDLING ***
+        else {
+            console.warn(`${role}: Received unknown signal type: ${type}`);
+        }
                 } catch (error) {
                     console.error('Doctor: Error handling signaling message:', error);
                     console.error('Doctor: Signaling state:', peerConnection?.signalingState);
@@ -828,21 +958,29 @@
                 }
             }
 
-            function sendSignalingMessage(type, data) {
-                console.log(`Doctor: Sending ${type} via signaling`);
-                fetch(`${API_BASE_URL}/webrtc/${type}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
-                }).catch(error => {
-                    console.error('Doctor: Signaling error:', error);
-                    // Retry signaling after a short delay
-                    setTimeout(() => {
-                        console.log(`Doctor: Retrying ${type} signaling`);
-                        sendSignalingMessage(type, data);
-                    }, 2000);
-                });
-            }
+            // patient.html AND doctor.html
+function sendSignalingMessage(type, data) {
+    if (!socket || !socket.connected) {
+        console.error(`Cannot send signal '${type}', WebSocket not connected.`);
+        showConnectionStatus(`Signaling connection lost. Trying to reconnect...`, 'error');
+        // Attempt to reconnect if disconnected
+        if (socket && !socket.connected) socket.connect();
+        return;
+    }
+    if (!currentAppointmentId) {
+        console.error(`Cannot send signal '${type}', currentAppointmentId is not set.`);
+        return;
+    }
+    const role = user ? 'Patient' : 'Doctor'; // Identify sender for logs
+    console.log(`${role}: Sending signal type: ${type} for appointment ${currentAppointmentId}`);
+    const payload = {
+        appointmentId: currentAppointmentId,
+        type: type,
+        data: data
+    };
+    socket.emit('signal', payload); // Use socket.emit
+}
+// Note: sendSignalingMessageWithRetry will now use the updated sendSignalingMessage
 
             async function sendSignalingMessageWithRetry(type, data) {
                 return new Promise((resolve, reject) => {
@@ -1040,30 +1178,7 @@ Possible solutions:
                 }, 2000);
             }
 
-            function pollSignaling() {
-                if (!currentAppointmentId) return;
-
-                fetch(`${API_BASE_URL}/webrtc/poll?appointmentId=${currentAppointmentId}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        return response.json();
-                    })
-                    .then(messages => {
-                        if (messages && messages.length > 0) {
-                            console.log(`Doctor: Received ${messages.length} signaling messages`);
-                            messages.forEach((msg, index) => {
-                                console.log(`Doctor: Processing message ${index + 1}:`, msg);
-                                handleSignalingMessage(msg.type, msg.data);
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Doctor: Polling error:', error);
-                        // Don't show error to user for polling failures, just log them
-                    });
-            }
+           
 
             function showConnectionStatus(message, type = 'info') {
                 const statusDiv = document.getElementById('connectionStatus');
@@ -1135,57 +1250,84 @@ Possible solutions:
                 }
             }
             
-            function endCall() {
-                try {
-                    console.log('Doctor: Ending call...');
+            // patient.html AND doctor.html
+function endCall() {
+    try {
+        console.log('Ending call...');
+        leaveCallRoom(); // *** LEAVE WEBSOCKET ROOM ***
 
-                    // Stop local media tracks
-                    if (localStream) {
-                        localStream.getTracks().forEach(track => {
-                            console.log('Doctor: Stopping track:', track.kind);
-                            track.stop();
-                        });
-                        localStream = null;
-                    }
+        // Stop local media tracks
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        // Close peer connection
+        if (peerConnection) {
+            // Remove listeners before closing to prevent errors
+            peerConnection.onicecandidate = null;
+            peerConnection.ontrack = null;
+            peerConnection.oniceconnectionstatechange = null;
+            peerConnection.onconnectionstatechange = null;
+            peerConnection.ondatachannel = null;
+            peerConnection.onsignalingstatechange = null;
+            peerConnection.close();
+            peerConnection = null;
+        }
+        // Close data channel
+        if (dataChannel) {
+            dataChannel.onmessage = null;
+            dataChannel.onopen = null;
+            dataChannel.onclose = null;
+            dataChannel.close();
+            dataChannel = null;
+        }
 
-                    // Close peer connection
-                    if (peerConnection) {
-                        peerConnection.close();
-                        peerConnection = null;
-                    }
+        // Reset UI elements (adjust element IDs for patient vs doctor)
+        const screenElementId = user ? 'callScreen' : 'consultationScreen';
+        const callScreen = document.getElementById(screenElementId);
+        if (callScreen) callScreen.classList.remove('active');
 
-                    // Close data channel
-                    if (dataChannel) {
-                        dataChannel.close();
-                        dataChannel = null;
-                    }
+        const remoteVideo = document.getElementById('remoteVideo');
+        if (remoteVideo) remoteVideo.srcObject = null;
+        const localVideo = document.getElementById('localVideo');
+        if (localVideo) localVideo.srcObject = null;
+        const messages = document.getElementById('messages'); // patient.html only? adjust if needed
+        if (messages) messages.innerHTML = '';
+        const startCallBtn = document.getElementById('startCallBtn');
+        if (startCallBtn) {
+             startCallBtn.disabled = false;
+             startCallBtn.textContent = 'Start Call';
+        }
+         // Reset mute buttons
+        const muteAudioBtn = document.getElementById('muteAudioBtn'); // patient.html only?
+        if (muteAudioBtn) muteAudioBtn.textContent = 'Mute Audio';
+        const muteVideoBtn = document.getElementById('muteVideoBtn'); // patient.html only?
+        if (muteVideoBtn) muteVideoBtn.textContent = 'Mute Video';
 
-                    // Reset state
-                    currentAppointmentId = null;
-                    isCallActive = false;
-                    iceCandidateQueue = [];
-                    isInitiator = false;
-                    retryCount = 0;
-                    retryDelay = 1000;
 
-                    // Reset UI
-                    const startCallBtn = document.getElementById('startCallBtn');
-                    if (startCallBtn) {
-                        startCallBtn.disabled = false;
-                        startCallBtn.textContent = 'Start Call';
-                    }
+        // Reset state variables
+        // currentAppointmentId = null; // Keep this commented if you want to allow rejoining easily
+        isCallActive = false; // Set call inactive
+        iceCandidateQueue = [];
+        isInitiator = false;
+        retryCount = 0;
+        retryDelay = 1000;
+        isAudioMuted = false;
+        isVideoMuted = false;
 
-                    // Hide connection status when call ends
-                    hideConnectionStatus();
 
-                    // Go back to dashboard
-                    showScreen('dashboardScreen');
+        hideConnectionStatus();
 
-                    console.log('Doctor: Call ended successfully');
-                } catch (error) {
-                    console.error('Doctor: Error ending call:', error);
-                }
-            }
+        // Go back to the appropriate screen after call ends
+        if(user) showScreen('appointmentsScreen'); // patient.html
+        if(doctor) showScreen('dashboardScreen'); // doctor.html
+
+
+        console.log('Call ended successfully');
+    } catch (error) {
+        console.error('Error ending call:', error);
+    }
+}
 
             // Test function for debugging WebRTC issues
             function testWebRTCConnection() {
@@ -1214,8 +1356,7 @@ Possible solutions:
                 return true;
             }
 
-            // Start polling for signaling messages periodically
-            setInterval(pollSignaling, 1000);
+            
 
             // Add test button event listener for debugging
             document.addEventListener('keydown', function(e) {
@@ -1580,28 +1721,48 @@ async function generateAppointments() {
                 document.getElementById('confirmationModal').classList.add('active');
             }
 
+            // In doctor.html, inside the <script> tag
+
             async function initializeApp() {
-                const isAuthenticated = await checkAuth();
-                if(isAuthenticated){
-                    setupNavigation();
-                    setupThemeAndLanguage();
-                    generateAppointments();
-                    generateHistoryList();
-                    generateEarningsHistory();
-                    setupFormsAndModals();
-                    // --- ADD THIS EVENT LISTENER ---
-                    document.getElementById('joinDemoCallBtn').addEventListener('click', () => {
-                        // Use the exact same ID as the patient's demo button
-                        showCallScreen('Live Demo Patient', 'demo-call-123');
-                    });
-                    // --- END OF NEW LISTENER ---
+                // 1. Check Authentication (Essential First Step for Doctor)
+                const isAuthenticated = await checkAuth(); // Assuming checkAuth fetches doctor profile
+                if (!isAuthenticated) return; // Stop if not logged in
 
-                    document.getElementById('logoutBtn').addEventListener('click', () => {
-                        showConfirmationModal("Logged Out", "You have been successfully logged out.");
-                    });
+                // *** CONNECT WEBSOCKET EARLY ***
+                connectSocket(); // Initialize WebSocket connection
 
-                    updateUIText();
-                }
+                // 2. Load Core Data (Necessary for doctor UI elements)
+                // await loadDoctors(); // Doctors might not need to load all doctors, perhaps just their own profile? Included checkAuth handles profile.
+
+                // 3. Setup Basic UI Elements (Theme, Language, Static Nav)
+                updateUIText();            // Apply initial language translations (uses doctor name)
+                setupNavigation();         // Make nav buttons clickable (doctor nav)
+                setupThemeAndLanguage();   // Setup theme/language toggles
+
+                // 4. Render Initial Screen Content (Doctor-Specific)
+                await generateAppointments(); // Fetch and render doctor's appointments
+                generateHistoryList();     // Render doctor's consultation history
+                generateEarningsHistory(); // Render doctor's earnings
+
+                // 5. Setup Interactive Components & Modals (Doctor-Specific)
+                setupFormsAndModals();     // Add event listeners for doctor modals (AI Summary, Rx Writer, etc.)
+                setupWebRTC();             // Initialize WebRTC for video calls
+                document.getElementById('joinDemoCallBtn').addEventListener('click', () => {
+                    // Use the exact same ID as the patient's demo button
+                    showCallScreen('Live Demo Patient', 'demo-call-123');
+                });
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                     // Clear session/local storage for doctor and redirect
+                     localStorage.removeItem('sehatSaharaDoctorToken'); // Example, adjust based on your auth method
+                     showConfirmationModal("Logged Out", "You have been successfully logged out.");
+                     setTimeout(() => window.location.href = 'index.html', 1500);
+                });
+
+
+                // 6. Final UI Updates
+                // No specific final checks like reminders needed for doctor usually
+
+                console.log("initializeApp (Doctor): Initialization complete.");
             }
 
             initializeApp();
