@@ -987,7 +987,7 @@ function sendSignalingMessage(type, data) {
                     const attemptSend = (attemptNumber) => {
                         console.log(`Doctor: Sending ${type} via signaling (attempt ${attemptNumber})`);
 
-                        fetch(`${API_BASE_URL}/webrtc/${type}`, {
+                        fetch(`${API_BASE_URL}/v1/webrtc/${type}`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
@@ -1407,7 +1407,7 @@ function endCall() {
             
             function checkAuth() {
                 // Fetch doctor profile from backend
-                return fetch(`${API_BASE_URL}/doctor/profile`, { // <-- MODIFY THIS LINE
+                return fetch(`${API_BASE_URL}/v1/doctor/profile`, { // <-- MODIFY THIS LINE
                     method: 'GET',
                     credentials: 'include',
                     headers: {
@@ -1518,7 +1518,7 @@ async function generateAppointments() {
     try {
         // --- NEW ---
         // Fetch live appointment data from the new backend endpoint
-        const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, {
+        const response = await fetch(`${API_BASE_URL}/v1/doctor/dashboard`, {
             credentials: 'include' // Important: sends the session cookie for authentication
         });
         const data = await response.json();
