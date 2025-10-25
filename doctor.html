@@ -987,7 +987,7 @@ function sendSignalingMessage(type, data) {
                     const attemptSend = (attemptNumber) => {
                         console.log(`Doctor: Sending ${type} via signaling (attempt ${attemptNumber})`);
 
-                        fetch(`${API_BASE_URL}/v1/webrtc/${type}`, {
+                        fetch(`${API_BASE_URL}/webrtc/${type}`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
@@ -1769,4 +1769,5 @@ async function generateAppointments() {
         });
     </script>
 </body>
+
 </html>
