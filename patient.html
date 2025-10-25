@@ -59,7 +59,7 @@
             }
             /* --- END: Add these Chat Message Dark Mode Fixes --- */
         }
-        }
+        
 
         html { scroll-behavior: smooth; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -4801,7 +4801,7 @@ Possible solutions:
             // ENHANCED saveMedicineReminder function
             // --- YOUR OTHER EXISTING JAVASCRIPT FUNCTIONS ---
         
-        // This is your correct, fully functional saveMedicineReminder
+        // In patient.html
         async function saveMedicineReminder() {
             const isEdit = currentlyEditing !== null;
             const action = isEdit ? 'update' : 'add';
@@ -4823,8 +4823,9 @@ Possible solutions:
                 medicine_data: {
                     name: medicineName,
                     dosage: dosage,
-                    times: times.split(',').map(t => t.trim()),
-                    duration_days: parseInt(duration),
+                    // Ensure times are correctly parsed into an array
+                    times: times.split(',').map(t => t.trim()).filter(t => t), // Filter empty strings
+                    duration_days: parseInt(duration) || 30, // Default duration if not provided
                     instructions: instructions,
                     timezone: userTimezone
                 }
@@ -4834,25 +4835,55 @@ Possible solutions:
                 payload.original_medicine_name = currentlyEditing;
             }
 
+            // --- Show loading state ---
+            const saveBtn = document.getElementById('saveReminderBtn');
+            const originalBtnText = saveBtn.textContent;
+            saveBtn.textContent = 'Saving...';
+            saveBtn.disabled = true;
+
             try {
+                console.log("Sending reminder save request:", payload); // Log payload
                 const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!response.ok) throw new Error('Failed to save reminder');
 
+                console.log("Reminder save response status:", response.status); // Log status
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save reminder' }));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                // --- START: Reordered Refresh Logic ---
+                // 1. Close modal and reset form
                 document.getElementById('medicineReminderModal').classList.remove('active');
                 document.getElementById('medicineReminderForm').reset();
-                currentlyEditing = null;
-                document.getElementById('saveReminderBtn').textContent = 'Save Reminder';
-                await loadMedicineRemindersScreen();
-                await checkMedicineReminders();
+                currentlyEditing = null; // Reset edit state
+
+                // 2. Show confirmation to the user
                 showConfirmationModal('Success', `Medicine reminder ${isEdit ? 'updated' : 'added'}!`);
+
+                // 3. *After* showing confirmation, refresh the data and UI
+                console.log("Reminder saved, now refreshing UI...");
+                await loadMedicineRemindersScreen(); // Refresh the dedicated reminder screen
+                await checkMedicineReminders(); // Refresh homepage counter and chat alerts
+
+                // --- END: Reordered Refresh Logic ---
+
 
             } catch (error) {
                 console.error('Save reminder error:', error);
-                alert('Failed to save medicine reminder. Please try again.');
+                alert(`Failed to save medicine reminder: ${error.message}. Please try again.`);
+            } finally {
+                // --- Reset button state ---
+                saveBtn.textContent = originalBtnText; // Restore original text
+                saveBtn.disabled = false;
+                // Ensure the button text resets correctly if it was an edit
+                if (!isEdit) {
+                   document.getElementById('saveReminderBtn').textContent = 'Save Reminder';
+                }
             }
         }
             // Add these functions inside your <script> tag in patient.html
