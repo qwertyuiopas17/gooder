@@ -1285,7 +1285,6 @@ async function showPatientSummary(appointmentId) {
     const symptomsList = document.getElementById('summarySymptoms');
     const vitalsList = document.getElementById('summaryVitals');
     const prescriptionsList = document.getElementById('summaryPrescriptions');
-    const startCallBtn = document.getElementById('startCallFromSummary');
 
     titleEl.textContent = `Loading Summary: ${patientName}...`;
     symptomsList.innerHTML = '<li>Loading...</li>';
@@ -2041,7 +2040,6 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
     const symptomsList = document.getElementById('summarySymptoms');
     const vitalsList = document.getElementById('summaryVitals');
     const prescriptionsList = document.getElementById('summaryPrescriptions');
-    const startCallBtn = document.getElementById('startCallFromSummary');
 
     titleEl.textContent = `Loading Summary: ${patientName}...`;
     symptomsList.innerHTML = '<li>Loading...</li>';
