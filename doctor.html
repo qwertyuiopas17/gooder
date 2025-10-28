@@ -1201,96 +1201,121 @@
             }
             // In doctor.html, inside the <script> block
 
-        async function showPatientSummary(appointmentId) {
-            console.log("Showing summary for appointment ID:", appointmentId);
-            // 1. Find the appointment details (including patientId)
-            const apptData = appData.appointments.find(a => String(a.id) === String(appointmentId));
+        // In doctor.html, inside the <script> block
+// REPLACE your async showPatientSummary with this improved version:
 
-            if (!apptData || !apptData.patientId) {
-                console.error("Could not find appointment data or patientId for ID:", appointmentId);
-                // Try fallback using mock summary data if needed (remove in production if mock data is gone)
-                const summaryData = appData.summaries ? appData.summaries[appointmentId] : null;
-                if (summaryData && summaryData.patientId) {
-                    apptData.patientId = summaryData.patientId;
-                    apptData.patient = summaryData.patient; // Use mock patient name if needed
-                } else {
-                     showConfirmationModal("Error", "Could not load patient context for this appointment.");
-                     return; // Stop if no patientId found
-                }
-            }
+async function showPatientSummary(appointmentId) {
+    console.log("Showing summary for appointment ID:", appointmentId);
+    let patientId = null;
+    let patientName = "Unknown Patient";
+    let apptData = null; // Initialize apptData
 
-            const patientId = apptData.patientId;
-            const patientName = apptData.patient || "Unknown Patient";
+    // 1. Find appointment details robustly
+    if (appData && appData.appointments && Array.isArray(appData.appointments)) {
+        apptData = appData.appointments.find(a =>
+            String(a.id) === String(appointmentId) ||
+            String(a.appointmentId) === String(appointmentId) ||
+            String(a.appointment_id) === String(appointmentId)
+        );
+    }
 
-            // Update global context and form dataset immediately
-            currentAppointment = { ...apptData }; // Store current context globally
-            const prescriptionForm = document.getElementById('prescriptionForm');
-            prescriptionForm.dataset.patientId = patientId;
-            document.getElementById('prescriptionPatientName').textContent = patientName;
-            // Clear form and reset mic button when summary is shown
-             clearPrescriptionForm(); // Assumes this function exists from setupAiPrescription
-             resetRecordingUI();    // Assumes this function exists from setupAiPrescription
+    if (apptData && apptData.patientId) {
+        patientId = apptData.patientId;
+        patientName = apptData.patient || patientName;
+        console.log(`Context found in appData: Patient ID=${patientId}, Name=${patientName}`);
+    } else {
+        // --- Fallback if not found in appData (e.g., race condition or data issue) ---
+        console.warn("Could not find appointment data or patientId for ID:", appointmentId, "in appData. Attempting direct lookup if possible (e.g., from button dataset if added).");
+        // If the button itself had data-patient-id (optional improvement):
+        // const buttonElement = document.querySelector(`.view-summary-btn[data-id="${appointmentId}"]`);
+        // if (buttonElement && buttonElement.dataset.patientId) {
+        //     patientId = buttonElement.dataset.patientId;
+        //     patientName = buttonElement.dataset.patientName || patientName; // Assuming data-patient-name exists too
+        //     console.log(`Context found via button dataset fallback: Patient ID=${patientId}, Name=${patientName}`);
+        // } else {
+            showConfirmationModal("Error", `Could not load patient context for appointment ${appointmentId}. Data might be loading.`);
+            return; // Stop execution if no patientId can be determined
+        // }
+    }
 
-            // 2. Prepare the Modal UI (Show loading state)
-            const modal = document.getElementById('aiSummaryModal');
-            const titleEl = document.getElementById('summaryModalTitle');
-            const symptomsList = document.getElementById('summarySymptoms');
-            const vitalsList = document.getElementById('summaryVitals');
-            const prescriptionsList = document.getElementById('summaryPrescriptions');
-            const startCallBtn = document.getElementById('startCallFromSummary'); // Get button
+    // --- Ensure patientId is now valid before proceeding ---
+    if (!patientId) {
+        showConfirmationModal("Error", "Patient identifier is missing. Cannot fetch summary.");
+        return;
+    }
 
-            titleEl.textContent = `Loading Summary: ${patientName}...`;
-            symptomsList.innerHTML = '<li>Loading...</li>';
-            vitalsList.innerHTML = '<li>Loading...</li>';
-            prescriptionsList.innerHTML = '<li>Loading...</li>';
-            startCallBtn.disabled = true; // Disable call button while loading
+    // Update global context and form dataset
+    currentAppointment = apptData ? { ...apptData } : { id: appointmentId, patientId: patientId, patient: patientName }; // Use found or fallback context
+    const prescriptionForm = document.getElementById('prescriptionForm');
+    const uploadRxForm = document.getElementById('uploadRxForm');
 
-            modal.classList.add('active'); // Show modal with loading state
+    if (prescriptionForm) {
+        prescriptionForm.dataset.patientId = patientId;
+        const nameSpan = document.getElementById('prescriptionPatientName');
+        if (nameSpan) nameSpan.textContent = patientName;
+         // Clear form and reset mic button
+         if (typeof clearPrescriptionForm === 'function') clearPrescriptionForm();
+         if (typeof resetRecordingUI === 'function') resetRecordingUI();
+    }
+    if (uploadRxForm) {
+        uploadRxForm.dataset.patientId = patientId;
+        const patientSelectDropdown = document.getElementById('patient-select');
+        if (patientSelectDropdown) patientSelectDropdown.value = patientId;
+    }
 
-            // 3. Fetch live summary data from the backend
-            try {
-                // --- THIS IS THE NEW BACKEND CALL ---
-                const response = await fetch(`${API_BASE_URL}/v1/patient-summary/${patientId}`, {
-                    method: 'GET',
-                    credentials: 'include' // Important for authentication
-                });
-                // --- END OF NEW BACKEND CALL ---
+    // 2. Prepare Modal UI (Show loading state) - No changes needed here
+    const modal = document.getElementById('aiSummaryModal');
+    // ... (get titleEl, symptomsList, vitalsList, prescriptionsList, startCallBtn) ...
+    const titleEl = document.getElementById('summaryModalTitle');
+    const symptomsList = document.getElementById('summarySymptoms');
+    const vitalsList = document.getElementById('summaryVitals');
+    const prescriptionsList = document.getElementById('summaryPrescriptions');
+    const startCallBtn = document.getElementById('startCallFromSummary');
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: `Server error: ${response.status}` }));
-                    throw new Error(errorData.message || `HTTP ${response.status}`);
-                }
+    titleEl.textContent = `Loading Summary: ${patientName}...`;
+    symptomsList.innerHTML = '<li>Loading...</li>';
+    vitalsList.innerHTML = '<li>Loading...</li>';
+    prescriptionsList.innerHTML = '<li>Loading...</li>';
+    if(startCallBtn) startCallBtn.disabled = true;
+    if(modal) modal.classList.add('active');
 
-                const summaryData = await response.json();
+    // 3. Fetch live summary data from the backend
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/patient-summary/${patientId}`, { /* ... */ });
+        // ... (check response.ok) ...
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                if (summaryData.success) {
-                    // 4. Populate Modal with Fetched Data
-                    titleEl.textContent = `AI Pre-Read: ${patientName}`; // Use fetched name? or keep from apptData?
-                    // Use optional chaining and provide defaults
-                    symptomsList.innerHTML = summaryData.symptoms?.length
-                        ? summaryData.symptoms.map(s => `<li>${s}</li>`).join('')
-                        : '<li>No recent symptoms logged.</li>';
-                    vitalsList.innerHTML = summaryData.vitals?.length
-                        ? summaryData.vitals.map(v => `<li>${v}</li>`).join('')
-                        : '<li>No recent vitals available.</li>';
-                    prescriptionsList.innerHTML = summaryData.prescriptions?.length
-                        ? summaryData.prescriptions.map(p => `<li>${p}</li>`).join('')
-                        : '<li>No active prescriptions found.</li>';
-                    startCallBtn.disabled = false; // Re-enable call button
-                } else {
-                    throw new Error(summaryData.message || 'Backend failed to retrieve summary.');
-                }
+        const summaryData = await response.json();
 
-            } catch (error) {
-                console.error('Error fetching patient summary:', error);
-                titleEl.textContent = `Error Loading Summary: ${patientName}`;
-                symptomsList.innerHTML = `<li>Error: ${error.message}</li>`;
-                vitalsList.innerHTML = '<li>Could not load vitals.</li>';
-                prescriptionsList.innerHTML = '<li>Could not load prescriptions.</li>';
-                startCallBtn.disabled = true; // Keep disabled on error
-                // Optionally add a retry button here
-            }
+        if (summaryData.success) {
+            // 4. Populate Modal with Fetched Data - WITH DEFAULTS
+            titleEl.textContent = `AI Pre-Read: ${patientName}`;
+
+            // --- FIX: Ensure arrays exist before mapping, provide defaults ---
+            const symptoms = summaryData.symptoms || [];
+            const vitals = summaryData.vitals || [];
+            const prescriptions = summaryData.prescriptions || [];
+            // --- END FIX ---
+
+            symptomsList.innerHTML = symptoms.length > 0 ? symptoms.map(s => `<li>${s}</li>`).join('') : '<li>No recent symptoms logged.</li>';
+            vitalsList.innerHTML = vitals.length > 0 ? vitals.map(v => `<li>${v}</li>`).join('') : '<li>No recent vitals available.</li>';
+            prescriptionsList.innerHTML = prescriptions.length > 0 ? prescriptions.map(p => `<li>${p}</li>`).join('') : '<li>No active prescriptions found.</li>';
+
+            if(startCallBtn) startCallBtn.disabled = false;
+        } else {
+            throw new Error(summaryData.message || 'Backend failed to retrieve summary.');
         }
+
+    } catch (error) {
+        // ... (existing error handling for fetch) ...
+        console.error('Error fetching patient summary:', error);
+        titleEl.textContent = `Error Loading Summary: ${patientName}`;
+        symptomsList.innerHTML = `<li>Error: ${error.message}</li>`;
+        vitalsList.innerHTML = '<li>Could not load vitals.</li>';
+        prescriptionsList.innerHTML = '<li>Could not load prescriptions.</li>';
+        if(startCallBtn) startCallBtn.disabled = true;
+    }
+}
 
             async function answerCall() {
                 try {
