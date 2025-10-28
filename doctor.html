@@ -727,7 +727,7 @@ async function sendSignalingMessageWithRetry(type, data) {
         try {
             console.log(`Doctor: Sending ${type} (Attempt ${attempt + 1})`);
             // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
-            const response = await fetch(`${API_BASE_URL}/v1/webrtc/${type}`, {
+            const response = await fetch(`${API_BASE_URL}/webrtc/${type}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
@@ -752,7 +752,7 @@ async function sendSignalingMessageWithRetry(type, data) {
 // Keep the non-retry version if needed elsewhere, but prefer the retry one for offers/answers
 function sendSignalingMessage(type, data) {
     // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
-    fetch(`${API_BASE_URL}/v1/webrtc/${type}`, {
+    fetch(`${API_BASE_URL}/webrtc/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
@@ -764,7 +764,7 @@ function pollSignaling() {
     if (!currentAppointmentId || !isCallActive) return; // Only poll if call is active
 
     // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
-    fetch(`${API_BASE_URL}/v1/webrtc/poll?appointmentId=${currentAppointmentId}`)
+    fetch(`${API_BASE_URL}/webrtc/poll?appointmentId=${currentAppointmentId}`)
         .then(response => response.ok ? response.json() : Promise.reject(`HTTP ${response.status}`))
         .then(messages => {
             if (messages && messages.length > 0) {
