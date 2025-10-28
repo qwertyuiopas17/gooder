@@ -369,25 +369,7 @@
     </div>
 </section>
 
-                <section id="prescriptionWriterScreen" class="screen">
-                    <div class="page-header"><h1 data-key="prescription_writer_title">New Digital Prescription</h1></div>
-                     <form class="card" id="prescriptionForm">
-                        <p style="margin-bottom: 1rem;"><strong>Patient:</strong> <span id="prescriptionPatientName"></span></p>
-                        <div class="form-group">
-                            <label for="medicine-name" data-key="medicine_name">Medicine Name</label>
-                            <input type="text" id="medicine-name" class="form-control" placeholder="e.g., Paracetamol 500mg">
-                        </div>
-                         <div class="form-group">
-                            <label for="medicine-dosage" data-key="dosage">Dosage</label>
-                            <input type="text" id="medicine-dosage" class="form-control" placeholder="e.g., 1-0-1 Before Food">
-                        </div>
-                        <div class="form-group">
-                            <label for="medicine-advice" data-key="advice">Advice</label>
-                            <textarea id="medicine-advice" class="form-control" rows="3"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width:100%" data-key="send_prescription">Sign & Send Prescription</button>
-                    </form>
-                </section>
+                
             </main>
         </div>
     </div>
@@ -1841,10 +1823,10 @@ async function generateAppointments() {
     container.innerHTML = upcomingAppointments.map(appt => `
         <div class="card appointment-card" data-id="${appt.id}">
             <div style="display: flex; align-items: center;">
-               <div class="appointment-type-indicator type-${appt.type || 'video'}"></div> {/* Default type */}
+               <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
                <div class="appointment-card-details">
                     <h4>${appt.patient || 'Unknown Patient'}</h4>
-                    <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p> {/* Default type */}
+                    <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
                </div>
             </div>
             <div class="appointment-actions">
@@ -1874,6 +1856,11 @@ async function generateAppointments() {
     });
     updateUIText();
 }
+// Add this helper function outside generateAppointments but inside the main script
+    function updateUploadFormPatientId(event) {
+        document.getElementById('uploadRxForm').dataset.patientId = event.target.value;
+        console.log("Upload form patientId updated via dropdown:", event.target.value); // Log change
+    }
             function generateHistoryList() {
                 const container = document.getElementById('historyList');
                 container.innerHTML = appData.history.map(appt => `
@@ -1886,17 +1873,7 @@ async function generateAppointments() {
                     </div>`).join('');
             }
             
-            function showPatientSummary(appointmentId) {
-                 currentAppointment = appData.appointments.find(a => a.id == appointmentId);
-                if (!currentAppointment) return;
-
-                document.getElementById('summaryModalTitle').textContent = `AI Pre-Read: ${currentAppointment.patient}`;
-                document.getElementById('summarySymptoms').innerHTML = currentAppointment.symptoms.map(s => `<li>${s}</li>`).join('');
-                document.getElementById('summaryVitals').innerHTML = currentAppointment.vitals.map(v => `<li>${v}</li>`).join('');
-                document.getElementById('summaryPrescriptions').innerHTML = currentAppointment.prescriptions.map(p => `<li>${p}</li>`).join('');
-
-                document.getElementById('aiSummaryModal').classList.add('active');
-            }
+            
 
             function showPrescriptionModal(appointmentId) {
                 const prescription = appData.prescriptions[appointmentId];
@@ -2138,8 +2115,30 @@ async function generateAppointments() {
                         showConfirmationModal("Logged Out", "You have been successfully logged out.");
                     });
 
-                    updateUIText();
-                }
+                    // --- START POLLING AFTER INITIAL LOAD ---
+    // Clear any previous interval just in case
+    if (appointmentPollingInterval) {
+        clearInterval(appointmentPollingInterval);
+    }
+    // Check for new appointments every 30 seconds (30000 milliseconds)
+    appointmentPollingInterval = setInterval(generateAppointments, 30000);
+    console.log("Started polling for appointments every 30 seconds.");
+    // --- END POLLING START ---
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+       // --- STOP POLLING ON LOGOUT ---
+       if (appointmentPollingInterval) {
+           clearInterval(appointmentPollingInterval);
+           console.log("Stopped polling for appointments on logout.");
+       }
+       // --- END STOP POLLING ---
+       localStorage.removeItem('sehatSaharaDoctor');
+       window.location.href = 'index.html';
+    });
+
+    updateUIText();
+    // ... (rest of initializeApp if any) ...
+}
             }
 
             initializeApp();
