@@ -1825,8 +1825,8 @@ async function generateAppointments() {
                     <div class="appointment-actions">
                          
                          <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-patient-id="${appt.patientId || ''}" data-appointment-id="${appointmentKey || ''}" data-key="call_patient">Call</button>
-                         <button class="btn btn-sm btn-message" data-id="${appointmentKey || ''}" data-key="message_patient">Message</button> {/* Message might still need lookup */}
-                         <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey || ''}" data-key="view_prescription">View Rx</button> {/* Rx might still need lookup */}
+                         <button class="btn btn-sm btn-message" data-id="${appointmentKey || ''}" data-key="message_patient">Message</button> 
+                         <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey || ''}" data-key="view_prescription">View Rx</button>
                          <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey || ''}" data-patient-id="${appt.patientId || ''}" data-patient-name="${appt.patient || 'Unknown Patient'}" data-key="view_summary">Summary</button> 
                     </div>
                 </div>`;
@@ -1934,7 +1934,7 @@ async function showPatientSummary(appointmentId, patientId, patientName) {
 
     // 3. Fetch live summary data using the guaranteed patientId
     try {
-        const response = await fetch(`${API_BASE_URL}/v1/patient-summary/${patientId}`, { /* ... */ });
+        const response = await fetch(`${API_BASE_URL}/patient-summary/${patientId}`, { /* ... */ });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const summaryData = await response.json();
