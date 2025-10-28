@@ -1860,7 +1860,13 @@ async function generateAppointments() {
                      const patientName = appt.patient || 'Unknown Patient';
                      return `
                      <div class="card appointment-card" data-id="${appointmentKey}" data-patient-id="${patientId}">
-                        
+                    <div style="display: flex; align-items: center;">
+                       <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
+                       <div class="appointment-card-details">
+                            <h4>${patientName}</h4>
+                            <p>${new Date(appt.dateTime).toLocaleDateString()} ${appt.time || new Date(appt.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
+                       </div>
+                    </div>  
                          <div class="appointment-actions">
                               <button class="btn btn-sm btn-call" data-patient="${patientName}" data-patient-id="${patientId}" data-appointment-id="${appointmentKey}" data-key="call_patient">Call</button>
                               <button class="btn btn-sm btn-message" data-id="${appointmentKey}" data-key="message_patient">Message</button>
@@ -1880,7 +1886,13 @@ async function generateAppointments() {
                      const patientName = appt.patient || 'Unknown Patient';
                      return `
                      <div class="card appointment-card" data-id="${appointmentKey}" data-patient-id="${patientId}">
-                         {... content like before ...}
+                    <div style="display: flex; align-items: center;">
+                       <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
+                       <div class="appointment-card-details">
+                            <h4>${patientName}</h4>
+                             <p>${new Date(appt.dateTime).toLocaleDateString()} ${appt.time || new Date(appt.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
+                       </div>
+                    </div>
                           <div class="appointment-actions">
                               <button class="btn btn-sm btn-message" data-id="${appointmentKey}" data-key="message_patient">Message</button>
                               <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey}" data-key="view_prescription">View Rx</button>
