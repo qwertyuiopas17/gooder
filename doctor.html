@@ -2331,9 +2331,49 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                     });
                     // --- END OF NEW LISTENER ---
 
-                    document.getElementById('logoutBtn').addEventListener('click', () => {
-                        showConfirmationModal("Logged Out", "You have been successfully logged out.");
-                    });
+                    // Inside your doctor.html <script> tag, find the logoutBtn event listener
+// Replace the existing listener with this corrected version:
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    // Stop polling (keep this part)
+    if (appointmentPollingInterval) {
+        clearInterval(appointmentPollingInterval);
+        console.log("Stopped polling for appointments on logout.");
+        appointmentPollingInterval = null; // Clear the interval ID
+    }
+
+    try {
+        // --- ADDED: Call the backend logout endpoint ---
+        const response = await fetch(`${API_BASE_URL}/v1/logout`, {
+            method: 'POST',
+            credentials: 'include', // Important: Sends the session cookie
+            headers: {
+                'Content-Type': 'application/json'
+                // No body needed for this specific logout endpoint
+            }
+        });
+
+        // Check if the backend logout was successful (optional but good practice)
+        if (response.ok) {
+            console.log('Backend logout successful.');
+        } else {
+            console.warn('Backend logout failed or session might have already expired.');
+            // We proceed with frontend cleanup regardless
+        }
+        // --- END ADDED SECTION ---
+
+    } catch (error) {
+        console.error('Error calling backend logout:', error);
+        // Still proceed with frontend cleanup even if the backend call fails
+    } finally {
+        // --- Frontend Cleanup and Redirect ---
+        // Remove potentially problematic localStorage item (consider removing if not strictly needed)
+        // localStorage.removeItem('sehatSaharaDoctor'); // If checkAuth relies ONLY on the backend, this isn't necessary
+
+        // Redirect to the landing page
+        window.location.href = 'index.html';
+    }
+});
 
                     // --- START POLLING AFTER INITIAL LOAD ---
     // Clear any previous interval just in case
