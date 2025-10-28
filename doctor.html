@@ -443,7 +443,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE_URL = '/api'; // <-- ADD THIS LINE
+            const API_BASE_URL = 'https://sahara-sathi.onrender.com/v1'; // <-- ADD THIS LINE
             let doctor = null;
             let currentLanguage = 'en';
             let currentAppointment = null;
@@ -599,7 +599,7 @@
 
                             try {
                                 console.log(`Sending audio for patient ${currentPatientId}...`);
-                                const response = await fetch(`${API_BASE_URL}/v1/doctor/generate-prescription-from-speech`, {
+                                const response = await fetch(`${API_BASE_URL}/doctor/generate-prescription-from-speech`, {
                                     method: 'POST',
                                     body: formData,
                                     credentials: 'include' // Crucial for authentication
@@ -686,7 +686,7 @@
                 submitButton.disabled = true;
 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/v1/doctor/create-digital-prescription`, {
+                    const response = await fetch(`${API_BASE_URL}/doctor/create-digital-prescription`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Credentials': 'include' },
                         body: JSON.stringify({
@@ -1282,7 +1282,7 @@ async function showPatientSummary(appointmentId) {
 
     // 3. Fetch live summary data from the backend
     try {
-        const response = await fetch(`${API_BASE_URL}/v1/patient-summary/${patientId}`, { /* ... */ });
+        const response = await fetch(`${API_BASE_URL}/patient-summary/${patientId}`, { /* ... */ });
         // ... (check response.ok) ...
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -1642,7 +1642,7 @@ Possible solutions:
             
             function checkAuth() {
                 // Fetch doctor profile from backend
-                return fetch(`${API_BASE_URL}/v1/doctor/profile`, { // <-- MODIFY THIS LINE
+                return fetch(`${API_BASE_URL}/doctor/profile`, { // <-- MODIFY THIS LINE
                     method: 'GET',
                     credentials: 'include',
                     headers: {
@@ -1761,7 +1761,7 @@ async function generateAppointments() {
     let fetchedAppointments = [];
 
     try {
-        const response = await fetch(`${API_BASE_URL}/v1/doctor/dashboard`, { credentials: 'include' });
+        const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, { credentials: 'include' });
         const data = await response.json();
 
         if (data.success && data.appointments) {
@@ -2142,7 +2142,7 @@ function updateUploadFormPatientId(event) {
                     const imageDataUrl = reader.result; // This is the base64 string with prefix
 
                     try {
-                        const response = await fetch(`${API_BASE_URL}/v1/doctor/upload-prescription`, { // Correct endpoint
+                        const response = await fetch(`${API_BASE_URL}/doctor/upload-prescription`, { // Correct endpoint
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
