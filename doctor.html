@@ -358,7 +358,7 @@
         </div>
         <div class="modal-actions" style="justify-content: center;">
              <button class="btn btn-primary" id="startCallBtn">Start Call</button>
-             <button class="btn btn-neutral" data-screen="prescriptionWriterScreen" data-key="write_prescription">Write Prescription</button>
+             
         <button class="btn btn-sos" id="endCallBtn" data-key="end_call">End Call</button> </div>
         <div id="connectionStatus" style="text-align: center; margin-top: 1rem; padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.1); display: none;">
             <span id="statusText">Connecting...</span>
@@ -399,7 +399,7 @@
             </div>
             <div class="modal-actions">
                 <button class="btn" id="closeSummaryModal" style="background: var(--color-secondary); color: var(--text-color);">Close</button>
-                <button class="btn btn-primary" id="startCallFromSummary">Start Call</button>
+                <button class="btn btn-primary" id="writeRxFromSummaryBtn" data-key="write_prescription">Write Prescription</button>
             </div>
         </div>
     </div>
@@ -2168,16 +2168,7 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                 document.getElementById('closeSummaryModal').addEventListener('click', () => document.getElementById('aiSummaryModal').classList.remove('active'));
                 // --- MODIFIED LINE ---
                 // When starting call from summary
-            document.getElementById('startCallFromSummary').addEventListener('click', () => {
-                // The patient context should ALREADY be set by showPatientSummary
-                if (currentAppointment && currentAppointment.patientId && currentAppointment.patient) {
-                     // Patient context IS set on the form by showPatientSummary
-                     // Just need to show the call screen
-                     showCallScreen(currentAppointment.patient, currentAppointment.id);
-                } else {
-                    showConfirmationModal('Error', 'Patient context is missing. Cannot start call.');
-                }
-            });
+            
 
             // Handle direct navigation to prescription screen (e.g., from consultation view)
             // Find the button inside the consultation view that navigates
@@ -2314,6 +2305,33 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                     showConfirmationModal('Prescription Sent', 'The digital prescription has been sent to the patient and their pharmacy.');
                     showScreen('dashboardScreen');
                 });
+                const writeRxBtn = document.getElementById('writeRxFromSummaryBtn');
+    if (writeRxBtn) {
+        writeRxBtn.addEventListener('click', () => {
+            // Context (currentAppointment, form dataset) is ALREADY set by showPatientSummary
+
+            // 1. Close the summary modal
+            document.getElementById('aiSummaryModal').classList.remove('active');
+
+            // 2. Ensure form is clear and recording reset (essential before showing)
+            if (typeof clearPrescriptionForm === 'function') {
+                clearPrescriptionForm();
+            } else {
+                console.warn("clearPrescriptionForm function not found");
+            }
+            if (typeof resetRecordingUI === 'function') {
+                resetRecordingUI();
+            } else {
+                console.warn("resetRecordingUI function not found");
+            }
+
+            // 3. Navigate to the prescription writer screen
+            showScreen('prescriptionWriterScreen');
+        });
+    } else {
+        console.warn("Write Prescription button (from summary modal) not found.");
+    }
+    // --- END ADDED Listener ---
                 // --- ADD THIS EVENT LISTENER FOR THE END CALL BUTTON ---
                 document.getElementById('endCallBtn').addEventListener('click', endCall);
 
