@@ -1642,7 +1642,7 @@ Possible solutions:
             
             function checkAuth() {
                 // Fetch doctor profile from backend
-                return fetch(`${API_BASE_URL}/doctor/profile`, { // <-- MODIFY THIS LINE
+                return fetch(`${API_BASE_URL}/v1/doctor/profile`, { // <-- MODIFY THIS LINE
                     method: 'GET',
                     credentials: 'include',
                     headers: {
@@ -1761,7 +1761,7 @@ async function generateAppointments() {
     let fetchedAppointments = [];
 
     try {
-        const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, { credentials: 'include' });
+        const response = await fetch(`${API_BASE_URL}/v1/doctor/dashboard`, { credentials: 'include' });
         const data = await response.json();
 
         if (data.success && data.appointments) {
