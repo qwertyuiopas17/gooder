@@ -2256,7 +2256,10 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Credentials': 'include' // Important for auth
+                                //'Credentials': 'include' // Important for auth
+                                // ---> ADD THIS LINE <---
+    credentials: 'include', // Tells the browser to send cookies with this request
+    // ---> END ADDED LINE <---
                             },
                             body: JSON.stringify({
                                 patientId: finalPatientId, // Send the determined patient ID
