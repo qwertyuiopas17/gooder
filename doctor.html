@@ -1764,10 +1764,10 @@ async function generateAppointments() {
     // --- Subtle Loading Indication for Polling ---
     // If the container already has content (not just a placeholder), don't show the full "Loading..." text during polling.
     // You could add a small spinner or briefly change opacity here if desired, but for simplicity, we'll just fetch.
-    let showFullLoading = !container.innerHTML || container.innerHTML.includes('<p style="text-align: center');
-    if (showFullLoading) {
-         container.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading appointments...</p>';
-    }
+    //let showFullLoading = !container.innerHTML || container.innerHTML.includes('<p style="text-align: center');
+    //if (showFullLoading) {
+        // container.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading appointments...</p>';
+    //}
     // --- End Loading Indication ---
 
 
