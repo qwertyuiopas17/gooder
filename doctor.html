@@ -448,6 +448,12 @@
             let currentLanguage = 'en';
             let currentAppointment = null;
             let appointmentPollingInterval = null;
+            // <<<--- ADD THIS ENTIRE WEBRTC SECTION ---<<<
+            
+            let mediaRecorder;
+            let audioChunks = [];
+            let isRecording = false;
+            let currentStream = null;
             // WebRTC variables
 let localStream;
 let peerConnection;
@@ -479,6 +485,242 @@ const configuration = {
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require'
 };
+            const startRecordingBtn = document.getElementById('start-recording-btn');
+            const recordIcon = document.getElementById('record-icon');
+            const recordText = document.getElementById('record-text');
+            const recordingStatus = document.getElementById('recording-status');
+            const processingStatus = document.getElementById('processing-status');
+
+            const prescriptionForm = document.getElementById('prescriptionForm');
+            const medicineNameInput = document.getElementById('medicine-name');
+            const medicineDosageInput = document.getElementById('medicine-dosage');
+            const medicineAdviceInput = document.getElementById('medicine-advice');
+            const patientNameSpan = document.getElementById('prescriptionPatientName');
+
+
+            
+            const clearPrescriptionForm = () => {
+                medicineNameInput.value = '';
+                medicineDosageInput.value = '';
+                medicineAdviceInput.value = '';
+                // Don't clear patientId or name here, as it's set by navigation context
+            };
+            const resetRecordingUI = (enableButton = true) => {
+                isRecording = false;
+                recordIcon.textContent = '🎤';
+                recordText.textContent = 'Record Prescription via Speech';
+                startRecordingBtn.style.backgroundColor = '#28a745'; // Reset to green
+                recordingStatus.style.display = 'none';
+                processingStatus.style.display = 'none';
+                startRecordingBtn.disabled = !enableButton;
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
+            };
+            // --- ADD THIS ENTIRE FUNCTION ---
+        function setupAiPrescription() {
+            
+            // Check if the button exists before proceeding
+            if (!startRecordingBtn) {
+                console.warn("AI Prescription recording button not found on this page.");
+                return; // Exit if the button isn't part of the current view
+            }
+
+            
+
+            // Check for MediaRecorder support
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+                console.warn('Audio recording or MediaRecorder API not supported.');
+                startRecordingBtn.textContent = 'Recording Not Supported';
+                startRecordingBtn.disabled = true;
+                return;
+            }
+
+
+            
+
+            // Call once on script load to set initial state
+            resetRecordingUI();
+
+            startRecordingBtn.addEventListener('click', async () => {
+                const currentPatientId = prescriptionForm.dataset.patientId;
+                if (!currentPatientId) {
+                    showConfirmationModal('Patient Not Selected', 'Please view a patient\'s summary or start a call before recording a prescription.');
+                    return;
+                }
+
+                if (!isRecording) {
+                    // --- Start Recording ---
+                    try {
+                        currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                        const options = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                            ? { mimeType: 'audio/webm;codecs=opus' }
+                            : MediaRecorder.isTypeSupported('audio/webm')
+                            ? { mimeType: 'audio/webm' }
+                            : {};
+
+                        mediaRecorder = new MediaRecorder(currentStream, options);
+                        audioChunks = [];
+
+                        mediaRecorder.ondataavailable = event => {
+                            if (event.data.size > 0) audioChunks.push(event.data);
+                        };
+
+                        mediaRecorder.onstop = async () => {
+                            if (audioChunks.length === 0) {
+                                console.warn("No audio data recorded.");
+                                showConfirmationModal('Recording Error', 'No audio was recorded. Microphone might not be capturing input.');
+                                resetRecordingUI();
+                                return;
+                            }
+
+                            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                            // Use a more specific filename if desired
+                            const audioFile = new File([audioBlob], `prescription_${currentPatientId}_${Date.now()}.webm`, { type: mediaRecorder.mimeType || 'audio/webm' });
+
+                            recordingStatus.style.display = 'none';
+                            processingStatus.style.display = 'block';
+                            startRecordingBtn.disabled = true;
+                            recordText.textContent = 'Processing AI...';
+
+                            const formData = new FormData();
+                            formData.append('audio', audioFile);
+                            formData.append('patientId', currentPatientId);
+
+                            try {
+                                console.log(`Sending audio for patient ${currentPatientId}...`);
+                                const response = await fetch(`${API_BASE_URL}/doctor/generate-prescription-from-speech`, {
+                                    method: 'POST',
+                                    body: formData,
+                                    credentials: 'include' // Crucial for authentication
+                                });
+
+                                const data = await response.json();
+                                console.log("Backend AI response:", data);
+
+                                if (response.ok && data.success) {
+                                    const structuredRx = data.structuredPrescription;
+                                    medicineNameInput.value = structuredRx.medicineName || '';
+                                    medicineDosageInput.value = structuredRx.dosage || '';
+                                    medicineAdviceInput.value = structuredRx.advice || '';
+                                    // Optional: Briefly show success before resetting button
+                                    processingStatus.textContent = '✅ Draft Ready!';
+                                    await new Promise(resolve => setTimeout(resolve, 1500)); // Show checkmark briefly
+                                } else {
+                                     // Provide specific feedback based on backend message
+                                     showConfirmationModal('AI Processing Failed', data.message || `Server error: ${response.status}. Please try again or enter manually.`);
+                                }
+                            } catch (error) {
+                                console.error('Error sending audio or processing AI response:', error);
+                                showConfirmationModal('Network Error', `Could not reach AI service: ${error.message}. Please check connection or enter manually.`);
+                            } finally {
+                                // Always reset the UI after processing attempt
+                                resetRecordingUI();
+                            }
+                        };
+
+                        mediaRecorder.start();
+                        isRecording = true;
+
+                        recordIcon.textContent = '■';
+                        recordText.textContent = 'Stop Recording';
+                        startRecordingBtn.style.backgroundColor = '#dc3545'; // Red color
+                        recordingStatus.style.display = 'block';
+                        processingStatus.style.display = 'none';
+                        clearPrescriptionForm(); // Clear fields for new recording
+
+                    } catch (err) {
+                        console.error('Error accessing microphone/starting recorder:', err);
+                        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                            showConfirmationModal('Permission Denied', 'Microphone access is required. Please allow permission in browser settings.');
+                        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                             showConfirmationModal('No Microphone', 'No microphone found on your device.');
+                        } else {
+                             showConfirmationModal('Microphone Error', 'Could not start recording. Ensure microphone is working and allowed.');
+                        }
+                        resetRecordingUI(false); // Keep button disabled if mic failed critically
+                    }
+                } else {
+                    // --- Stop Recording ---
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                         mediaRecorder.stop(); // This triggers the 'onstop' event
+                    }
+                     // UI reset happens within the 'onstop' handler after processing
+                }
+            });
+
+            // Set up listener for the form submission (digital prescription save)
+            // This listener should already exist in your setupFormsAndModals,
+            // ensure it correctly reads the patientId from prescriptionForm.dataset.patientId
+            // and sends the content of the input fields.
+             prescriptionForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const patientId = e.target.dataset.patientId; // Get patient context
+                if (!patientId) {
+                    showConfirmationModal('Error', 'No patient context. Please select a patient first.');
+                    return;
+                }
+                const medicineName = medicineNameInput.value.trim();
+                const dosage = medicineDosageInput.value.trim();
+                const advice = medicineAdviceInput.value.trim();
+
+                if (!medicineName || !dosage) {
+                    showConfirmationModal('Missing Info', 'Please ensure Medicine Name and Dosage Instructions are filled (either by AI or manually).');
+                    return;
+                }
+
+                // Show loading/saving state
+                const submitButton = prescriptionForm.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.textContent;
+                submitButton.textContent = 'Sending...';
+                submitButton.disabled = true;
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/doctor/create-digital-prescription`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json'},
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            patientId,
+                            medicineName,
+                            dosage,
+                            advice
+                        })
+                    });
+                    // Check if the response was actually received and OK
+                     if (!response.ok) {
+                         // Try to get error message from backend if possible
+                         let errorMsg = `Server error: ${response.status}`;
+                         try {
+                              const errorData = await response.json();
+                              errorMsg = errorData.message || errorMsg;
+                         } catch(jsonError) { /* Ignore if response not JSON */ }
+                         throw new Error(errorMsg); // Throw error to be caught below
+                     }
+                    const data = await response.json();
+                    if (data.success) {
+                        showConfirmationModal('Prescription Sent', 'The digital prescription has been saved and sent to the patient.');
+                        // Optionally clear form and navigate away
+                        clearPrescriptionForm();
+                        resetRecordingUI(); // Reset mic button too
+                        showScreen('dashboardScreen');
+                    } else {
+                        throw new Error(data.message || 'Failed to save digital prescription.');
+                    }
+                } catch (error) {
+                    showConfirmationModal('Save Failed', `Error saving prescription: ${error.message}`);
+                } finally {
+                    submitButton.textContent = originalButtonText;
+                    submitButton.disabled = false;
+                }
+             });
+        }
+        // --- END OF setupAiPrescription FUNCTION ---
+
+            
+            // In doctor.html, inside the <script> block
 function showCallScreen(patientName, appointmentId) {
     currentAppointmentId = appointmentId;
     document.getElementById('consultationHeader').textContent = `Consultation with ${patientName}`;
@@ -862,7 +1104,7 @@ async function resetConnection() {
     isCallActive = wasActive;
     initializeWebRTC();
 }
-
+        // In doctor.html, inside the <script> block
 // REPLACE your async showPatientSummary with this improved version:
 
 async function showPatientSummary(appointmentId) {
@@ -1451,7 +1693,19 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
         startCallBtn.disabled = true;
     }
 }
-// Define this function in the main script scope
+
+            function generateHistoryList() {
+                const container = document.getElementById('historyList');
+                container.innerHTML = appData.history.map(appt => `
+                    <div class="card history-card">
+                        <div>
+                            <h4>${appt.patient}</h4>
+                            <p>${new Date(appt.date).toLocaleDateString()} - ${appt.time}</p>
+                        </div>
+                        <span class="status-badge status-${appt.status.toLowerCase()}">${appt.status}</span>
+                    </div>`).join('');
+            }
+            // Define this function in the main script scope
 function setupWebRTC() {
     // Attach listeners to call control buttons specific to doctor UI
     document.getElementById('startCallBtn')?.addEventListener('click', startCall); // Check if exists
@@ -1472,17 +1726,32 @@ function setupWebRTC() {
     // should be handled within your generateAppointments function.
     // Ensure they correctly call showCallScreen(patientName, appointmentId).
 }
-            function generateHistoryList() {
-                const container = document.getElementById('historyList');
-                container.innerHTML = appData.history.map(appt => `
-                    <div class="card history-card">
-                        <div>
-                            <h4>${appt.patient}</h4>
-                            <p>${new Date(appt.date).toLocaleDateString()} - ${appt.time}</p>
-                        </div>
-                        <span class="status-badge status-${appt.status.toLowerCase()}">${appt.status}</span>
-                    </div>`).join('');
-            }
+// Test function for debugging WebRTC issues
+function testWebRTCConnection() {
+    console.log('Doctor: Testing WebRTC connection...');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('Doctor: WebRTC not supported');
+        showConnectionStatus('WebRTC not supported', 'error');
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+            console.log('Doctor: Media device test successful');
+            stream.getTracks().forEach(track => track.stop());
+            showConnectionStatus('WebRTC test successful', 'success');
+        })
+        .catch(error => {
+            console.error('Doctor: Media device test failed:', error);
+            showConnectionStatus('Media device test failed: ' + error.message, 'error');
+        });
+}
+
+// Add test button event listener for debugging
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'T') { // Ctrl+Shift+T
+        testWebRTCConnection();
+    }
+});
             
             
 
