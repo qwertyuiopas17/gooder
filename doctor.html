@@ -1643,42 +1643,58 @@ Possible solutions:
                 ]
             };
             
-            function checkAuth() {
-                // Fetch doctor profile from backend
-                return fetch(`${API_BASE_URL}/doctor/profile`, { // <-- MODIFY THIS LINE
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.doctor) {
-                        doctor = {
-                            fullName: data.doctor.fullName,
-                            doctorId: data.doctor.doctorId,
-                            email: data.doctor.email,
-                            specialization: data.doctor.specialization,
-                            qualification: data.doctor.qualification,
-                            experience: data.doctor.experience,
-                            clinicName: data.doctor.clinicName,
-                            phoneNumber: data.doctor.phoneNumber,
-                            profileImageUrl: data.doctor.profileImageUrl
-                        };
-                        return true;
-                    } else {
-                        // Redirect to login if not authenticated
-                        window.location.href = 'index.html';
-                        return false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Auth check failed:', error);
-                    window.location.href = 'index.html';
-                    return false;
-                });
+            async function checkAuth() {
+    console.log("Running checkAuth for doctor..."); // Add logging
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/doctor/profile`, {
+            method: 'GET',
+            credentials: 'include', // Crucial: sends the session cookie
+            headers: {
+                'Content-Type': 'application/json',
+                // Add cache-control headers to potentially help bypass browser cache on this check
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
             }
+        });
+
+        // --- THIS IS THE CRITICAL CHECK ---
+        if (!response.ok) {
+            // If response status is not 2xx (e.g., 401, 403, 404, 500)
+            console.error(`Auth check failed with status: ${response.status}`);
+            // Redirect immediately if not authenticated/authorized
+            window.location.href = 'index.html';
+            return false; // Indicate failure
+        }
+        // --- END CRITICAL CHECK ---
+
+        // If response.ok is true, proceed to parse JSON
+        const data = await response.json();
+
+        if (data.success && data.doctor) {
+            // Successfully authenticated
+            doctor = { // Assign to your global 'doctor' variable
+                fullName: data.doctor.fullName,
+                doctorId: data.doctor.doctorId, // Store the string ID if needed
+                email: data.doctor.email,
+                // Add other fields as necessary from data.doctor
+            };
+            console.log("Doctor authenticated:", doctor.fullName);
+            return true; // Indicate success
+        } else {
+            // Backend indicated success: false or missing doctor data
+            console.warn("Auth check response OK, but backend reported failure or missing data.");
+            window.location.href = 'index.html';
+            return false; // Indicate failure
+        }
+
+    } catch (error) {
+        // Handle network errors or other exceptions during fetch
+        console.error('Auth check fetch error:', error);
+        window.location.href = 'index.html';
+        return false; // Indicate failure
+    }
+}
 
             function updateUIText() {
                 const langPack = translations[currentLanguage] || translations.en;
@@ -2313,95 +2329,108 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                 document.getElementById('confirmationModal').classList.add('active');
             }
 
-            async function initializeApp() {
-                const isAuthenticated = await checkAuth();
-                if(isAuthenticated){
-                    setupNavigation();
-                    setupThemeAndLanguage();
+            // *** COMPLETE initializeApp FUNCTION ***
+async function initializeApp() {
+    const isAuthenticated = await checkAuth(); // Wait for authentication check
 
-                    generateAppointments();
-                    generateHistoryList();
-                    generateEarningsHistory();
-                    setupFormsAndModals();
-                    setupAiPrescription();
-                    // --- ADD THIS EVENT LISTENER ---
-                    document.getElementById('joinDemoCallBtn').addEventListener('click', () => {
-                        // Use the exact same ID as the patient's demo button
-                        showCallScreen('Live Demo Patient', 'demo-call-123');
-                    });
-                    // --- END OF NEW LISTENER ---
+    if (isAuthenticated) {
+        console.log("Authentication successful, initializing doctor app...");
 
-                    // Inside your doctor.html <script> tag, find the logoutBtn event listener
-// Replace the existing listener with this corrected version:
+        // --- Setup UI and Load Initial Data ---
+        // Basic UI setup first
+        setupNavigation();
+        setupThemeAndLanguage();
 
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-    // Stop polling (keep this part)
+        // Load initial data *before* starting polling
+        await generateAppointments(); // Load appointments (makes API call)
+        generateHistoryList();       // Generate history based on initial appData/fetch
+        generateEarningsHistory();   // Generate earnings based on initial appData/fetch
+
+        // Setup interactive elements, forms, and modals AFTER basic data might be needed
+        setupFormsAndModals();       // Initialize modals and form listeners
+        setupAiPrescription();       // Initialize AI prescription recording features
+
+        // Setup the "Join Demo Call" button listener (can be done anytime after DOM ready)
+        const joinDemoBtn = document.getElementById('joinDemoCallBtn');
+        if (joinDemoBtn) {
+            joinDemoBtn.addEventListener('click', () => {
+                // Use the exact same ID as the patient's demo button
+                showCallScreen('Live Demo Patient', 'demo-call-123');
+            });
+        } else {
+            console.warn("Join Demo Call button not found.");
+        }
+
+        // --- Start Polling AFTER initial load and setup ---
+        // Clear any previous interval just in case (good practice)
+        if (appointmentPollingInterval) {
+            clearInterval(appointmentPollingInterval);
+        }
+        // Check for new appointments every 30 seconds
+        appointmentPollingInterval = setInterval(generateAppointments, 30000);
+        console.log("Started polling for doctor appointments every 30 seconds.");
+
+        // Update UI text, including the welcome message which now has the doctor's name
+        updateUIText();
+
+    } else {
+        // This block runs if checkAuth returned false (and should have redirected)
+        console.log("Authentication failed, user redirected (or should have been). App initialization stopped.");
+        // No need to run the rest of the app initialization
+    }
+}
+
+// --- Logout Listener Setup (as before - keep this outside initializeApp) ---
+// Define the actual logout handler
+async function handleLogout() {
+    // Stop polling
     if (appointmentPollingInterval) {
         clearInterval(appointmentPollingInterval);
         console.log("Stopped polling for appointments on logout.");
-        appointmentPollingInterval = null; // Clear the interval ID
+        appointmentPollingInterval = null;
     }
-
     try {
-        // --- ADDED: Call the backend logout endpoint ---
-        const response = await fetch(`${API_BASE_URL}/logout`, {
-            method: 'POST',
-            credentials: 'include', // Important: Sends the session cookie
-            headers: {
-                'Content-Type': 'application/json'
-                // No body needed for this specific logout endpoint
-            }
+        // Call the backend logout endpoint
+        const response = await fetch(`${API_BASE_URL}/v1/logout`, {
+             method: 'POST',
+             credentials: 'include',
+             headers: { 'Content-Type': 'application/json' }
         });
-
-        // Check if the backend logout was successful (optional but good practice)
-        if (response.ok) {
-            console.log('Backend logout successful.');
-        } else {
-            console.warn('Backend logout failed or session might have already expired.');
-            // We proceed with frontend cleanup regardless
-        }
-        // --- END ADDED SECTION ---
-
+        if (response.ok) console.log('Backend logout successful.');
+        else console.warn('Backend logout failed or session might have expired.');
     } catch (error) {
         console.error('Error calling backend logout:', error);
-        // Still proceed with frontend cleanup even if the backend call fails
     } finally {
-        // --- Frontend Cleanup and Redirect ---
-        // Remove potentially problematic localStorage item (consider removing if not strictly needed)
-        // localStorage.removeItem('sehatSaharaDoctor'); // If checkAuth relies ONLY on the backend, this isn't necessary
-
         // Redirect to the landing page
         window.location.href = 'index.html';
     }
-});
-
-                    // --- START POLLING AFTER INITIAL LOAD ---
-    // Clear any previous interval just in case
-    if (appointmentPollingInterval) {
-        clearInterval(appointmentPollingInterval);
-    }
-    // Check for new appointments every 30 seconds (30000 milliseconds)
-    appointmentPollingInterval = setInterval(generateAppointments, 30000);
-    console.log("Started polling for appointments every 30 seconds.");
-    // --- END POLLING START ---
-
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-       // --- STOP POLLING ON LOGOUT ---
-       if (appointmentPollingInterval) {
-           clearInterval(appointmentPollingInterval);
-           console.log("Stopped polling for appointments on logout.");
-       }
-       // --- END STOP POLLING ---
-       localStorage.removeItem('sehatSaharaDoctor');
-       window.location.href = 'index.html';
-    });
-
-    updateUIText();
-    // ... (rest of initializeApp if any) ...
 }
-            }
 
-            initializeApp();
+// Function to attach the logout listener
+function setupLogoutListener() {
+    const logoutButton = document.getElementById('logoutBtn');
+    if (logoutButton) {
+        // Remove potentially existing listener first
+        logoutButton.removeEventListener('click', handleLogout);
+        // Add the listener
+        logoutButton.addEventListener('click', handleLogout);
+        console.log("Logout listener attached.");
+    } else {
+        console.warn("Logout button not found.");
+    }
+}
+
+
+// --- DOMContentLoaded ---
+document.addEventListener('DOMContentLoaded', function() {
+    // Other initializations if needed...
+
+    initializeApp(); // Start the main app initialization (which includes auth check)
+
+    setupLogoutListener(); // Set up the logout listener *after* the DOM is ready
+
+    // Any other code that should run once on page load...
+});
         });
     </script>
 </body>
