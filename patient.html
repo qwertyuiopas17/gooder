@@ -1822,27 +1822,57 @@ async function triggerSos(user) {
             }
             
              async function generateAllPrescriptions() {
-                const container = document.getElementById('prescriptions-container');
-                try {
-                    // Added the required userId query parameter to the URL
-                    const response = await fetch(`${API_BASE_URL}/v1/dashboard?userId=${user.patientId}`);
-                    // --- END OF CORRECTION ---
-                    const data = await response.json();
-                    if (data.success && data.healthRecords) {
-                        const prescriptions = data.healthRecords.filter(record => record.recordType === 'prescription');
-                        container.innerHTML = prescriptions.length ? prescriptions.map((p, index) => `<div class="card appointment-card"><div class="appointment-card-header"><div class="appointment-card-doctor"><h4>${p.title.replace('Prescription from ', '')}</h4><p>Offline</p><p>${new Date(p.date).toDateString()}</p></div><span class="appointment-card-tag tag-offline">Offline</span></div><div class="appointment-card-footer"><button class="btn btn-primary view-prescription-btn" data-prescription='${JSON.stringify(p)}'>View Prescription</button></div></div>`).join('') : '<p>No prescriptions found.</p>';
-                        container.querySelectorAll('.view-prescription-btn').forEach(btn => btn.addEventListener('click', e => {
-                            const prescriptionData = JSON.parse(e.currentTarget.dataset.prescription);
-                            showPrescriptionFromRecord(prescriptionData);
-                        }));
-                    } else {
-                        container.innerHTML = '<p>No prescriptions found.</p>';
-                    }
-                } catch (e) {
-                    console.error('Failed to load prescriptions:', e);
-                    container.innerHTML = '<p>Failed to load prescriptions.</p>';
+    const container = document.getElementById('prescriptions-container');
+    let prescriptions = []; // <<<--- Store fetched prescriptions here
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/dashboard?userId=${user.patientId}`);
+        const data = await response.json();
+
+        if (data.success && data.healthRecords) {
+            // Filter and store the prescription records in the local 'prescriptions' array
+            prescriptions = data.healthRecords.filter(record => record.recordType === 'prescription');
+
+            container.innerHTML = prescriptions.length ? prescriptions.map((p, index) => `
+                <div class="card appointment-card">
+                    <div class="appointment-card-header">
+                        <div class="appointment-card-doctor">
+                            <h4>${p.title.replace('Prescription from ', '')}</h4>
+                            <p>Offline</p>
+                            <p>${new Date(p.date).toDateString()}</p>
+                        </div>
+                        <span class="appointment-card-tag tag-offline">Offline</span>
+                    </div>
+                    <div class="appointment-card-footer">
+                        {/* --- MODIFIED LINE: Store index instead of full JSON --- */}
+                        <button class="btn btn-primary view-prescription-btn" data-prescription-index="${index}">View Prescription</button>
+                    </div>
+                </div>`).join('') : '<p>No prescriptions found.</p>';
+
+            // --- MODIFIED EVENT LISTENER ---
+            container.querySelectorAll('.view-prescription-btn').forEach(btn => btn.addEventListener('click', e => {
+                // Get the index from the button's data attribute
+                const index = parseInt(e.currentTarget.dataset.prescriptionIndex, 10);
+                // Retrieve the correct prescription object from the array using the index
+                const prescriptionData = prescriptions[index];
+
+                if (prescriptionData) {
+                    showPrescriptionFromRecord(prescriptionData); // Call the display function
+                } else {
+                    console.error("Could not find prescription data for index:", index);
+                    showConfirmationModal("Error", "Could not retrieve prescription details.");
                 }
-            }
+            }));
+            // --- END MODIFIED EVENT LISTENER ---
+
+        } else {
+            container.innerHTML = '<p>No prescriptions found.</p>';
+        }
+    } catch (e) {
+        console.error('Failed to load prescriptions:', e);
+        container.innerHTML = '<p>Failed to load prescriptions.</p>';
+    }
+}
 
 
             
