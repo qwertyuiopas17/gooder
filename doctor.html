@@ -443,7 +443,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE_URL = 'https://sahara-sathi.onrender.com/v1'; // <-- ADD THIS LINE
+            const API_BASE_URL = '/api'; // <-- ADD THIS LINE
             let doctor = null;
             let currentLanguage = 'en';
             let currentAppointment = null;
@@ -1823,11 +1823,11 @@ async function generateAppointments() {
                      <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
                     
                     <div class="appointment-actions">
-                         {/* Pass patientId and patientName directly in data attributes for easier access */}
+                         
                          <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-patient-id="${appt.patientId || ''}" data-appointment-id="${appointmentKey || ''}" data-key="call_patient">Call</button>
                          <button class="btn btn-sm btn-message" data-id="${appointmentKey || ''}" data-key="message_patient">Message</button> {/* Message might still need lookup */}
                          <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey || ''}" data-key="view_prescription">View Rx</button> {/* Rx might still need lookup */}
-                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey || ''}" data-patient-id="${appt.patientId || ''}" data-patient-name="${appt.patient || 'Unknown Patient'}" data-key="view_summary">Summary</button> {/* Pass ALL needed data */}
+                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey || ''}" data-patient-id="${appt.patientId || ''}" data-patient-name="${appt.patient || 'Unknown Patient'}" data-key="view_summary">Summary</button> 
                     </div>
                 </div>`;
             }).join('');
