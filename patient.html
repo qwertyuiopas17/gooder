@@ -2138,6 +2138,18 @@ function showTrackingModal(orderId) {
                 event.preventDefault(); // <-- THIS IS THE FIX
                 await saveMedicineReminder();
             });
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+    // 1. Remove user data from local storage
+    localStorage.removeItem('sehatSaharaUser'); // Make sure the key matches what you use for login
+
+    // 2. Show a confirmation message (optional, but good UX)
+    showConfirmationModal("Logged Out", "You have been successfully logged out.");
+
+    // 3. Redirect to the login page after a short delay
+    setTimeout(() => {
+        window.location.href = 'index.html'; // Redirect to your login page
+    }, 1500); // Wait 1.5 seconds before redirecting
+});
 
                 document.getElementById('confirmSos').addEventListener('click', () => { document.getElementById('sosModal').classList.remove('active'); showConfirmationModal('SOS Activated', 'Emergency services have been notified.'); });
                 document.getElementById('reportIssueForm')?.addEventListener('submit', (e) => { e.preventDefault(); showConfirmationModal('Report Submitted', 'Your report has been sent for review.'); e.target.reset(); setTimeout(() => showScreen('moreScreen'), 2000); });
@@ -2150,7 +2162,6 @@ function showTrackingModal(orderId) {
                         if (currentStep > 1) renderBookingStep(currentStep - 1);
                     }
                 });
-                document.getElementById('logoutBtn').addEventListener('click', () => { alert("You have been logged out."); window.location.reload(); });
                 document.getElementById('viewAllPrescriptions').addEventListener('click', () => showScreen('prescriptionsScreen'));
                 document.getElementById('medicineReminders').addEventListener('click', () => { showScreen('medicineRemindersScreen'); loadMedicineRemindersScreen(); });
             }
@@ -3111,7 +3122,45 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 console.warn("displayMessage received non-string content:", message);
             }
             // --- End Type Checking ---
+            
+            // --- START: Add Speaker Icon for Bot Messages ---
+        if (sender === 'bot') {
+            messageElement.style.position = 'relative'; // Ensure relative positioning for absolute icon
+            messageElement.style.paddingRight = '30px'; // Add space for the icon
 
+            const speakButton = document.createElement('button');
+            speakButton.innerHTML = '🔊';
+            speakButton.className = 'speak-button'; // Add class for event delegation
+            speakButton.setAttribute('aria-label', 'Read message aloud');
+            speakButton.style.cssText = `
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background: none;
+                border: none;
+                font-size: 1rem;
+                cursor: pointer;
+                opacity: 0.6;
+                transition: opacity 0.2s;
+            `;
+
+            // Store the text to be spoken directly on the button's dataset
+            // Use the already determined text content (handles strings vs objects)
+            speakButton.dataset.textToSpeak = messageElement.textContent; // <<< Use textContent here
+
+            speakButton.addEventListener('mouseenter', () => speakButton.style.opacity = '1');
+            speakButton.addEventListener('mouseleave', () => speakButton.style.opacity = '0.6');
+
+            // Click handler will be added via event delegation later (in the next snippet)
+            messageElement.appendChild(speakButton);
+
+            // Adjust icon position for guidance messages if needed
+             if (typeof message === 'string' && message.includes('💡')) {
+                speakButton.style.bottom = '10px';
+                speakButton.style.right = '10px';
+             }
+        }
+        // --- END: Add Speaker Icon --
             // Add the new message bubble to the chat window
             this.chatWindow.appendChild(messageElement);
 
@@ -3312,66 +3361,91 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 const chatWindow = document.getElementById('chatWindow'); // Make sure chatWindow is defined here
                 
                 // --- START: Speech-to-Text code ---
-                const recordButton = document.getElementById('record-button');
+const recordButton = document.getElementById('record-button');
 
-                // Check if the browser supports the Web Speech API
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Check if the browser supports the Web Speech API
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-                if (SpeechRecognition) {
-                    const recognition = new SpeechRecognition();
-                    
-                    // Use the app's current language (from your 'translations' object)
-                    // 'currentLanguage' is already defined in your main script
-                    recognition.lang = currentLanguage || 'en-US'; 
-                    recognition.interimResults = false;
-                    recognition.continuous = false;
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
 
-                    recordButton.addEventListener('click', () => {
-                        console.log("Recording started...");
-                        recordButton.textContent = '...'; // Show a "listening" state
-                        recordButton.disabled = true;
-                        try {
-                            recognition.start();
-                        } catch (e) {
-                            console.error("Recognition already started.", e);
-                            recordButton.textContent = '🎤'; // Reset button
-                            recordButton.disabled = false;
-                        }
-                    });
+    // Use the app's current language (assuming 'currentLanguage' is accessible)
+    recognition.lang = currentLanguage || 'en-US'; // Default to English if not set
+    recognition.interimResults = false; // We only want final results
+    recognition.continuous = false; // Stop listening after first utterance
 
-                    // This event fires when speech is recognized
-                    recognition.onresult = (event) => {
-                        const spokenText = event.results[0][0].transcript;
-                        console.log("User said:", spokenText);
-                        chatInput.value = spokenText; // Put the text in the chat box
-                        
-                        // --- Optional: Automatically send the message ---
-                        // You can uncomment the line below to send the message immediately
-                        // chatForm.dispatchEvent(new Event('submit')); 
-                    };
+    recordButton.addEventListener('click', () => {
+        console.log("Recording started...");
+        recordButton.textContent = '...'; // Show a "listening" state
+        recordButton.disabled = true;
+        try {
+            // Ensure recognition is not already running
+            recognition.stop(); // Stop any previous instance just in case
+            recognition.start();
+        } catch (e) {
+            console.error("Error starting recognition (maybe already running, or stopped prematurely):", e);
+            // If start() fails immediately, reset the button
+            recordButton.textContent = '🎤';
+            recordButton.disabled = false;
+        }
+    });
 
-                    // Handle end of speech
-                    recognition.onend = () => {
-                        recordButton.textContent = '🎤'; // Reset button icon
-                        recordButton.disabled = false;
-                    };
+    // This event fires when speech is recognized
+    recognition.onresult = (event) => {
+        const spokenText = event.results[0][0].transcript;
+        console.log("User said:", spokenText);
+        chatInput.value = spokenText; // Put the text in the chat box
 
-                    // Handle errors
-                    recognition.onerror = (event) => {
-                        console.error("Speech recognition error:", event.error);
-                        recordButton.textContent = '🎤'; // Reset button on error
-                        recordButton.disabled = false;
-                        if (event.error === 'not-allowed') {
-                            alert("Please allow microphone access in your browser settings to use this feature.");
-                        }
-                    };
+        // --- Optional: Automatically send the message ---
+        // Uncomment the line below to send the message immediately after speech is recognized
+        // chatForm.dispatchEvent(new Event('submit'));
+    };
 
-                } else {
-                    // Browser doesn't support it
-                    console.log("Speech recognition not supported in this browser.");
-                    recordButton.style.display = 'none'; // Hide the button if not supported
-                }
-                // --- END: Speech-to-Text code ---
+    // Handle end of speech processing
+    recognition.onend = () => {
+        console.log("Recognition ended.");
+        recordButton.textContent = '🎤'; // Reset button icon
+        recordButton.disabled = false;
+    };
+
+    // Handle errors during recognition
+    recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        recordButton.textContent = '🎤'; // Reset button on error
+        recordButton.disabled = false;
+
+        // Provide specific user feedback based on the error type
+        switch(event.error) {
+            case 'no-speech':
+                console.warn("No speech detected.");
+                // Optionally show a small message to the user
+                break;
+            case 'audio-capture':
+                alert("Could not capture audio. Please ensure your microphone is working and allowed.");
+                break;
+            case 'not-allowed':
+                alert("Microphone access denied. Please allow microphone access in your browser settings to use this feature.");
+                break;
+            case 'network':
+                console.error("Network error during speech recognition. Check internet connection.");
+                // Optionally inform the user about network issues
+                break;
+            case 'aborted':
+                console.log("Speech recognition aborted."); // Usually happens if stop() is called early or by user action
+                break;
+            default:
+                alert(`An unknown speech error occurred: ${event.error}`);
+        }
+    };
+
+} else {
+    // Browser doesn't support the API
+    console.log("Speech recognition not supported in this browser.");
+    if(recordButton) { // Check if the button exists before trying to hide it
+       recordButton.style.display = 'none'; // Hide the button if not supported
+    }
+}
+// --- END: Speech-to-Text code ---
 
 
                 // This is your FULL original event listener, now it works correctly.
@@ -5051,6 +5125,7 @@ Possible solutions:
             }
 
 
+
             
 
             async function initializeApp() {
@@ -5145,6 +5220,63 @@ Possible solutions:
             }
 
             initializeApp();
+            // --- START: Text-to-Speech (TTS) Logic ---
+const chatWindowForTTS = document.getElementById('chatWindow');
+
+// Check if Speech Synthesis is supported
+if ('speechSynthesis' in window) {
+    const synth = window.speechSynthesis;
+    let currentUtterance = null; // To track the currently speaking utterance
+
+    // Use event delegation for dynamically added buttons
+    chatWindowForTTS.addEventListener('click', (event) => {
+        // Check if the clicked element is our speak button
+        if (event.target.classList.contains('speak-button')) {
+            const button = event.target;
+            const textToSpeak = button.dataset.textToSpeak; // Get text from dataset
+
+            if (textToSpeak) {
+                // If currently speaking, stop it first
+                if (synth.speaking && currentUtterance) {
+                    synth.cancel();
+                }
+
+                // Create a new utterance
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+
+                // Optional: Configure voice, rate, pitch
+                utterance.lang = currentLanguage || 'en-US'; // Use the selected language
+                // utterance.rate = 1; // Speed (0.1 to 10)
+                // utterance.pitch = 1; // Pitch (0 to 2)
+
+                // Keep track of this utterance
+                currentUtterance = utterance;
+
+                // Handle the end of speech
+                utterance.onend = () => {
+                    console.log('Finished speaking.');
+                    currentUtterance = null;
+                };
+
+                // Handle errors
+                utterance.onerror = (e) => {
+                    console.error('Speech synthesis error:', e);
+                    currentUtterance = null;
+                };
+
+                // Speak the text
+                synth.speak(utterance);
+            }
+        }
+    });
+
+} else {
+    console.warn("Speech Synthesis (Text-to-Speech) is not supported in this browser.");
+    // Optionally hide all speak buttons if TTS is not supported
+    // This might require adding a class to hide them via CSS initially
+    // and only showing them if 'speechSynthesis' in window is true.
+}
+// --- END: Text-to-Speech (TTS) Logic ---
         });
     </script>
     <!-- Notification Banner for Push Reminders -->
