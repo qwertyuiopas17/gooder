@@ -466,6 +466,7 @@
             let audioChunks = [];
             let isRecording = false;
             let currentStream = null;
+            const startRecordingBtn = document.getElementById('start-recording-btn');
             const recordIcon = document.getElementById('record-icon');
             const recordText = document.getElementById('record-text');
             const recordingStatus = document.getElementById('recording-status');
@@ -530,7 +531,7 @@
             };
             // --- ADD THIS ENTIRE FUNCTION ---
         function setupAiPrescription() {
-            const startRecordingBtn = document.getElementById('start-recording-btn');
+            
             // Check if the button exists before proceeding
             if (!startRecordingBtn) {
                 console.warn("AI Prescription recording button not found on this page.");
