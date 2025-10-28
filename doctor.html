@@ -1747,147 +1747,89 @@ Possible solutions:
             }
 
             // In doctor.html, replace the entire generateAppointments function with this
-async function generateAppointments() {
-    const container = document.getElementById('appointmentsList');
-    // Clear previous content and show loading state IMMEDIATELY
-    container.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading appointments...</p>';
 
-    let fetchedAppointments = []; // Store fetched data temporarily
 
+// REVISED showPatientSummary - Accepts patientId and patientName directly
+async function showPatientSummary(appointmentId, patientId, patientName) {
+    console.log(`Showing summary for Appt ID: ${appointmentId}, Patient ID: ${patientId}, Name: ${patientName}`);
+
+    // --- CRITICAL: Use the passed-in patientId directly ---
+    if (!patientId) {
+        showConfirmationModal("Error", `Could not load patient context for appointment ${appointmentId}. Patient ID missing.`);
+        return; // Stop execution if patientId wasn't passed correctly
+    }
+
+    // Update global context and form dataset
+    // We might not have the full apptData here, just use what was passed
+    currentAppointment = { id: appointmentId, patientId: patientId, patient: patientName };
+    const prescriptionForm = document.getElementById('prescriptionForm');
+    const uploadRxForm = document.getElementById('uploadRxForm');
+
+    if (prescriptionForm) {
+        prescriptionForm.dataset.patientId = patientId;
+        const nameSpan = document.getElementById('prescriptionPatientName');
+        if (nameSpan) nameSpan.textContent = patientName;
+         // Clear form and reset mic button
+         if (typeof clearPrescriptionForm === 'function') clearPrescriptionForm();
+         if (typeof resetRecordingUI === 'function') resetRecordingUI();
+    }
+     if (uploadRxForm) {
+        uploadRxForm.dataset.patientId = patientId;
+        const patientSelectDropdown = document.getElementById('patient-select');
+        if (patientSelectDropdown) patientSelectDropdown.value = patientId; // Try to select in dropdown
+    }
+
+
+    // 2. Prepare Modal UI (Show loading state) - No changes needed
+    const modal = document.getElementById('aiSummaryModal');
+    const titleEl = document.getElementById('summaryModalTitle');
+    const symptomsList = document.getElementById('summarySymptoms');
+    const vitalsList = document.getElementById('summaryVitals');
+    const prescriptionsList = document.getElementById('summaryPrescriptions');
+    const startCallBtn = document.getElementById('startCallFromSummary');
+
+    titleEl.textContent = `Loading Summary: ${patientName}...`;
+    symptomsList.innerHTML = '<li>Loading...</li>';
+    vitalsList.innerHTML = '<li>Loading...</li>';
+    prescriptionsList.innerHTML = '<li>Loading...</li>';
+    if(startCallBtn) startCallBtn.disabled = true;
+    if(modal) modal.classList.add('active');
+
+    // 3. Fetch live summary data using the guaranteed patientId
     try {
-        const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, {
-            credentials: 'include'
-        });
-        const data = await response.json();
+        const response = await fetch(`${API_BASE_URL}/v1/patient-summary/${patientId}`, { /* ... */ });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        if (data.success && data.appointments) {
-            console.log("Fetched live appointments:", JSON.stringify(data.appointments)); // Log raw fetched data
-            fetchedAppointments = data.appointments; // Use the fetched data
+        const summaryData = await response.json();
+
+        if (summaryData.success) {
+            // 4. Populate Modal with Fetched Data - WITH DEFAULTS
+            titleEl.textContent = `AI Pre-Read: ${patientName}`; // Use name passed in
+            const symptoms = summaryData.symptoms || [];
+            const vitals = summaryData.vitals || [];
+            const prescriptions = summaryData.prescriptions || [];
+
+            symptomsList.innerHTML = symptoms.length > 0 ? symptoms.map(s => `<li>${s}</li>`).join('') : '<li>No recent symptoms logged.</li>';
+            vitalsList.innerHTML = vitals.length > 0 ? vitals.map(v => `<li>${v}</li>`).join('') : '<li>No recent vitals available.</li>';
+            prescriptionsList.innerHTML = prescriptions.length > 0 ? prescriptions.map(p => `<li>${p}</li>`).join('') : '<li>No active prescriptions found.</li>';
+
+            if(startCallBtn) startCallBtn.disabled = false;
         } else {
-            console.warn("API call failed or no appointments. Falling back to mock data.");
-            // --- Fallback to mock data ONLY if fetch fails ---
-            fetchedAppointments = appData.appointments; // Use existing mock data as fallback
+            throw new Error(summaryData.message || 'Backend failed to retrieve summary.');
         }
+
     } catch (error) {
-        console.error("Error fetching appointments:", error);
-        container.innerHTML = '<p style="text-align: center; padding: 2rem; color: red;">Could not load appointments.</p>';
-        // --- Fallback to mock data on error ---
-        fetchedAppointments = appData.appointments; // Use existing mock data as fallback
+        // ... (existing error handling for fetch) ...
+        console.error('Error fetching patient summary:', error);
+        titleEl.textContent = `Error Loading Summary: ${patientName}`;
+        symptomsList.innerHTML = `<li>Error: ${error.message}</li>`;
+        vitalsList.innerHTML = '<li>Could not load vitals.</li>';
+        prescriptionsList.innerHTML = '<li>Could not load prescriptions.</li>';
+        if(startCallBtn) startCallBtn.disabled = true;
     }
-
-    // --- CRITICAL: Update appData AFTER fetch/fallback ---
-    appData.appointments = fetchedAppointments;
-    console.log("Updated appData.appointments:", JSON.stringify(appData.appointments)); // Log the data being used
-
-    // --- Populate dropdown (runs AFTER appData is updated) ---
-    const patientSelectDropdown = document.getElementById('patient-select');
-    if (patientSelectDropdown) {
-        patientSelectDropdown.innerHTML = ''; // Clear previous
-        const validAppointments = appData.appointments.filter(appt => appt && appt.patientId && appt.patient);
-        const uniquePatients = [...new Map(validAppointments.map(item => [item.patientId, item])).values()];
-
-        if (uniquePatients.length > 0) {
-            uniquePatients.forEach(appt => {
-                const option = document.createElement('option');
-                option.value = appt.patientId;
-                option.textContent = appt.patient;
-                patientSelectDropdown.appendChild(option);
-            });
-            // Set initial dataset and listener
-            document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
-            patientSelectDropdown.removeEventListener('change', updateUploadFormPatientId);
-            patientSelectDropdown.addEventListener('change', updateUploadFormPatientId);
-        } else {
-            const option = document.createElement('option');
-            option.textContent = "No patients available";
-            option.disabled = true;
-            patientSelectDropdown.appendChild(option);
-            document.getElementById('uploadRxForm').removeAttribute('data-patient-id');
-        }
-    }
-    // --- End dropdown population ---
-
-    // --- Render list HTML (AFTER appData is updated) ---
-    const now = new Date();
-    const validAppointmentsForRender = appData.appointments.filter(appt => appt && appt.dateTime);
-    const upcomingAppointments = validAppointmentsForRender.filter(appt => new Date(appt.dateTime) >= now);
-
-    if (upcomingAppointments.length === 0) {
-        container.innerHTML = `<p style="text-align: center; padding: 2rem;">You have no upcoming appointments today.</p>`;
-    } else {
-        // Build the HTML, ensuring data-id uses the correct key
-        container.innerHTML = upcomingAppointments.map(appt => {
-            // --- Determine the correct ID key ---
-            const appointmentKey = appt.id || appt.appointmentId || appt.appointment_id;
-            if (!appointmentKey) {
-                console.error("Appointment object missing ID key:", appt); // Log if ID key is missing entirely
-            }
-            return `
-            <div class="card appointment-card" data-id="${appointmentKey || ''}"> {/* Use found key or empty string */}
-                <div style="display: flex; align-items: center;">
-                   <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
-                   <div class="appointment-card-details">
-                        <h4>${appt.patient || 'Unknown Patient'}</h4>
-                        <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
-                   </div>
-                </div>
-                <div class="appointment-actions">
-                     <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-key="call_patient">Call</button>
-                     <button class="btn btn-sm btn-message" data-id="${appointmentKey || ''}" data-key="message_patient">Message</button>
-                     <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey || ''}" data-key="view_prescription">View Rx</button>
-                     <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey || ''}" data-key="view_summary">Summary</button> {/* Ensure data-id is set */}
-                </div>
-            </div>`;
-        }).join('');
-
-        // --- Attach Event Listeners AFTER rendering ---
-        container.querySelectorAll('.view-summary-btn').forEach(btn => {
-            const appointmentIdForListener = btn.dataset.id;
-            if (appointmentIdForListener) {
-                // Remove previous listener before adding new one (important for polling)
-                btn.replaceWith(btn.cloneNode(true)); // Simple way to remove all listeners
-                container.querySelector(`.view-summary-btn[data-id="${appointmentIdForListener}"]`)
-                         .addEventListener('click', () => showPatientSummary(appointmentIdForListener));
-            } else {
-                console.error("Summary button rendered without data-id:", btn);
-            }
-        });
-        // --- Repeat listener attachment for other buttons (.view-rx-btn, .btn-call, .btn-message) ---
-        // Example for call button:
-        container.querySelectorAll('.btn-call').forEach(btn => {
-            const card = btn.closest('.appointment-card');
-            const appointmentIdForListener = card ? card.dataset.id : null;
-            const patientName = btn.dataset.patient;
-            if (appointmentIdForListener) {
-                 btn.replaceWith(btn.cloneNode(true)); // Remove old listeners
-                 container.querySelector(`.appointment-card[data-id="${appointmentIdForListener}"] .btn-call`)
-                          .addEventListener('click', () => showCallScreen(patientName, appointmentIdForListener));
-            }
-        });
-        // (Add similar logic for view-rx-btn and btn-message)
-        container.querySelectorAll('.view-rx-btn').forEach(btn => {
-            const appointmentIdForListener = btn.dataset.id;
-            if(appointmentIdForListener) {
-                btn.replaceWith(btn.cloneNode(true));
-                container.querySelector(`.view-rx-btn[data-id="${appointmentIdForListener}"]`)
-                         .addEventListener('click', () => showPrescriptionModal(appointmentIdForListener));
-            }
-        });
-        container.querySelectorAll('.btn-message').forEach(btn => {
-            const appointmentIdForListener = btn.dataset.id;
-            if(appointmentIdForListener) {
-                btn.replaceWith(btn.cloneNode(true));
-                container.querySelector(`.btn-message[data-id="${appointmentIdForListener}"]`)
-                         .addEventListener('click', () => showMessageModal(appointmentIdForListener));
-            }
-        });
-        // --- End Attach Event Listeners ---
-    }
-
-    updateUIText(); // Update text translations if needed
 }
 
-// Ensure the helper function exists in the global scope of the script
+// Ensure the helper function exists
 function updateUploadFormPatientId(event) {
     document.getElementById('uploadRxForm').dataset.patientId = event.target.value;
     console.log("Upload form patientId updated via dropdown:", event.target.value);
