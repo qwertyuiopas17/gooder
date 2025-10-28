@@ -2329,108 +2329,90 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                 document.getElementById('confirmationModal').classList.add('active');
             }
 
-            // *** COMPLETE initializeApp FUNCTION ***
-async function initializeApp() {
-    const isAuthenticated = await checkAuth(); // Wait for authentication check
+            async function initializeApp() {
+                const isAuthenticated = await checkAuth();
+                console.log("Authentication successful, initializing doctor app...");
+                if(isAuthenticated){
+                    setupNavigation();
+                    setupThemeAndLanguage();
 
-    if (isAuthenticated) {
-        console.log("Authentication successful, initializing doctor app...");
+                    generateAppointments();
+                    generateHistoryList();
+                    generateEarningsHistory();
+                    setupFormsAndModals();
+                    setupAiPrescription();
+                    // --- ADD THIS EVENT LISTENER ---
+                    document.getElementById('joinDemoCallBtn').addEventListener('click', () => {
+                        // Use the exact same ID as the patient's demo button
+                        showCallScreen('Live Demo Patient', 'demo-call-123');
+                    });
+                    // --- END OF NEW LISTENER ---
 
-        // --- Setup UI and Load Initial Data ---
-        // Basic UI setup first
-        setupNavigation();
-        setupThemeAndLanguage();
+                    // Inside your doctor.html <script> tag, find the logoutBtn event listener
+// Replace the existing listener with this corrected version:
 
-        // Load initial data *before* starting polling
-        await generateAppointments(); // Load appointments (makes API call)
-        generateHistoryList();       // Generate history based on initial appData/fetch
-        generateEarningsHistory();   // Generate earnings based on initial appData/fetch
-
-        // Setup interactive elements, forms, and modals AFTER basic data might be needed
-        setupFormsAndModals();       // Initialize modals and form listeners
-        setupAiPrescription();       // Initialize AI prescription recording features
-
-        // Setup the "Join Demo Call" button listener (can be done anytime after DOM ready)
-        const joinDemoBtn = document.getElementById('joinDemoCallBtn');
-        if (joinDemoBtn) {
-            joinDemoBtn.addEventListener('click', () => {
-                // Use the exact same ID as the patient's demo button
-                showCallScreen('Live Demo Patient', 'demo-call-123');
-            });
-        } else {
-            console.warn("Join Demo Call button not found.");
-        }
-
-        // --- Start Polling AFTER initial load and setup ---
-        // Clear any previous interval just in case (good practice)
-        if (appointmentPollingInterval) {
-            clearInterval(appointmentPollingInterval);
-        }
-        // Check for new appointments every 30 seconds
-        appointmentPollingInterval = setInterval(generateAppointments, 30000);
-        console.log("Started polling for doctor appointments every 30 seconds.");
-
-        // Update UI text, including the welcome message which now has the doctor's name
-        updateUIText();
-
-    } else {
-        // This block runs if checkAuth returned false (and should have redirected)
-        console.log("Authentication failed, user redirected (or should have been). App initialization stopped.");
-        // No need to run the rest of the app initialization
-    }
-}
-
-// --- Logout Listener Setup (as before - keep this outside initializeApp) ---
-// Define the actual logout handler
-async function handleLogout() {
-    // Stop polling
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    // Stop polling (keep this part)
     if (appointmentPollingInterval) {
         clearInterval(appointmentPollingInterval);
         console.log("Stopped polling for appointments on logout.");
-        appointmentPollingInterval = null;
+        appointmentPollingInterval = null; // Clear the interval ID
     }
+
     try {
-        // Call the backend logout endpoint
-        const response = await fetch(`${API_BASE_URL}/v1/logout`, {
-             method: 'POST',
-             credentials: 'include',
-             headers: { 'Content-Type': 'application/json' }
+        // --- ADDED: Call the backend logout endpoint ---
+        const response = await fetch(`${API_BASE_URL}/logout`, {
+            method: 'POST',
+            credentials: 'include', // Important: Sends the session cookie
+            headers: {
+                'Content-Type': 'application/json'
+                // No body needed for this specific logout endpoint
+            }
         });
-        if (response.ok) console.log('Backend logout successful.');
-        else console.warn('Backend logout failed or session might have expired.');
+
+        // Check if the backend logout was successful (optional but good practice)
+        if (response.ok) {
+            console.log('Backend logout successful.');
+        } else {
+            console.warn('Backend logout failed or session might have already expired.');
+            // We proceed with frontend cleanup regardless
+        }
+        // --- END ADDED SECTION ---
+
     } catch (error) {
         console.error('Error calling backend logout:', error);
+        // Still proceed with frontend cleanup even if the backend call fails
     } finally {
+        // --- Frontend Cleanup and Redirect ---
+        // Remove potentially problematic localStorage item (consider removing if not strictly needed)
+        // localStorage.removeItem('sehatSaharaDoctor'); // If checkAuth relies ONLY on the backend, this isn't necessary
+
         // Redirect to the landing page
         window.location.href = 'index.html';
     }
-}
+});
 
-// Function to attach the logout listener
-function setupLogoutListener() {
-    const logoutButton = document.getElementById('logoutBtn');
-    if (logoutButton) {
-        // Remove potentially existing listener first
-        logoutButton.removeEventListener('click', handleLogout);
-        // Add the listener
-        logoutButton.addEventListener('click', handleLogout);
-        console.log("Logout listener attached.");
-    } else {
-        console.warn("Logout button not found.");
+                    // --- START POLLING AFTER INITIAL LOAD ---
+    // Clear any previous interval just in case
+    if (appointmentPollingInterval) {
+        clearInterval(appointmentPollingInterval);
+    }
+    // Check for new appointments every 30 seconds (30000 milliseconds)
+    appointmentPollingInterval = setInterval(generateAppointments, 30000);
+    console.log("Started polling for appointments every 30 seconds.");
+    // --- END POLLING START ---
+
+
+    updateUIText();
+    // ... (rest of initializeApp if any) ...
+}else {
+        console.log("Authentication failed, user redirected (or should have been).");
+        // No need to run the rest of the app initialization
     }
 }
+            
 
-
-// --- DOMContentLoaded ---
-document.addEventListener('DOMContentLoaded', function() {
-    // Other initializations if needed...
-
-    initializeApp(); // Start the main app initialization (which includes auth check)
-
-    setupLogoutListener(); // Set up the logout listener *after* the DOM is ready
-
-    // Any other code that should run once on page load...
-});
+            initializeApp();
         });
     </script>
 </body>
