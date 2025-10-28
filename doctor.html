@@ -1818,10 +1818,10 @@ async function generateAppointments() {
                 const appointmentKey = appt.id || appt.appointmentId || appt.appointment_id; // Use correct ID key
                 return `
                 <div class="card appointment-card" data-id="${appointmentKey || ''}">
-                    {/* ... card details ... */}
+                    
                      <h4>${appt.patient || 'Unknown Patient'}</h4>
                      <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
-                    {/* ... end card details ... */}
+                    
                     <div class="appointment-actions">
                          {/* Pass patientId and patientName directly in data attributes for easier access */}
                          <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-patient-id="${appt.patientId || ''}" data-appointment-id="${appointmentKey || ''}" data-key="call_patient">Call</button>
