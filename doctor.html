@@ -448,775 +448,421 @@
             let currentLanguage = 'en';
             let currentAppointment = null;
             let appointmentPollingInterval = null;
-            // <<<--- ADD THIS ENTIRE WEBRTC SECTION ---<<<
             // WebRTC variables
-            let localStream;
-            let peerConnection;
-            let dataChannel;
-            let isAudioMuted = false;
-            let isVideoMuted = false;
-            let currentAppointmentId = null;
-            let iceCandidateQueue = [];
-            let isCallActive = false;
-            let isInitiator = false; // Role assignment for collision resolution
-            let retryCount = 0;
-            let maxRetries = 3;
-            let retryDelay = 1000; // Start with 1 second
-            let mediaRecorder;
-            let audioChunks = [];
-            let isRecording = false;
-            let currentStream = null;
-            const startRecordingBtn = document.getElementById('start-recording-btn');
-            const recordIcon = document.getElementById('record-icon');
-            const recordText = document.getElementById('record-text');
-            const recordingStatus = document.getElementById('recording-status');
-            const processingStatus = document.getElementById('processing-status');
+let localStream;
+let peerConnection;
+let dataChannel;
+let isAudioMuted = false; // Note: Mute buttons aren't in the doctor UI, but variables might be kept
+let isVideoMuted = false; // Note: Mute buttons aren't in the doctor UI, but variables might be kept
+let currentAppointmentId = null;
+let iceCandidateQueue = [];
+// Removed offerQueue as it wasn't used in the provided doctor(9).html
+let isCallActive = false;
+let isInitiator = false; // Role assignment for collision resolution
+let retryCount = 0;
+let maxRetries = 3;
+let retryDelay = 1000; // Start with 1 second
 
-            const prescriptionForm = document.getElementById('prescriptionForm');
-            const medicineNameInput = document.getElementById('medicine-name');
-            const medicineDosageInput = document.getElementById('medicine-dosage');
-            const medicineAdviceInput = document.getElementById('medicine-advice');
-            const patientNameSpan = document.getElementById('prescriptionPatientName');
+// Enhanced WebRTC configuration (Same as patient)
+const configuration = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require'
+};
+function showCallScreen(patientName, appointmentId) {
+    currentAppointmentId = appointmentId;
+    document.getElementById('consultationHeader').textContent = `Consultation with ${patientName}`;
+    showScreen('consultationScreen'); // Use your existing showScreen function
+    hideConnectionStatus(); // Hide previous status
+    initializeWebRTC();
+}
 
-
-            // Enhanced WebRTC configuration with multiple STUN/TURN servers
-            const configuration = {
-                iceServers: [
-                    // STUN servers for NAT traversal
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-
-                    // TURN servers for fallback when STUN fails
-                    {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
-                ],
-                iceCandidatePoolSize: 10,
-                bundlePolicy: 'max-bundle',
-                rtcpMuxPolicy: 'require'
-            };
-            const clearPrescriptionForm = () => {
-                medicineNameInput.value = '';
-                medicineDosageInput.value = '';
-                medicineAdviceInput.value = '';
-                // Don't clear patientId or name here, as it's set by navigation context
-            };
-            const resetRecordingUI = (enableButton = true) => {
-                isRecording = false;
-                recordIcon.textContent = '🎤';
-                recordText.textContent = 'Record Prescription via Speech';
-                startRecordingBtn.style.backgroundColor = '#28a745'; // Reset to green
-                recordingStatus.style.display = 'none';
-                processingStatus.style.display = 'none';
-                startRecordingBtn.disabled = !enableButton;
-                if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop());
-                    currentStream = null;
-                }
-            };
-            // --- ADD THIS ENTIRE FUNCTION ---
-        function setupAiPrescription() {
-            
-            // Check if the button exists before proceeding
-            if (!startRecordingBtn) {
-                console.warn("AI Prescription recording button not found on this page.");
-                return; // Exit if the button isn't part of the current view
-            }
-
-            
-
-            // Check for MediaRecorder support
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-                console.warn('Audio recording or MediaRecorder API not supported.');
-                startRecordingBtn.textContent = 'Recording Not Supported';
-                startRecordingBtn.disabled = true;
-                return;
-            }
-
-
-            
-
-            // Call once on script load to set initial state
-            resetRecordingUI();
-
-            startRecordingBtn.addEventListener('click', async () => {
-                const currentPatientId = prescriptionForm.dataset.patientId;
-                if (!currentPatientId) {
-                    showConfirmationModal('Patient Not Selected', 'Please view a patient\'s summary or start a call before recording a prescription.');
-                    return;
-                }
-
-                if (!isRecording) {
-                    // --- Start Recording ---
-                    try {
-                        currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-                        const options = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-                            ? { mimeType: 'audio/webm;codecs=opus' }
-                            : MediaRecorder.isTypeSupported('audio/webm')
-                            ? { mimeType: 'audio/webm' }
-                            : {};
-
-                        mediaRecorder = new MediaRecorder(currentStream, options);
-                        audioChunks = [];
-
-                        mediaRecorder.ondataavailable = event => {
-                            if (event.data.size > 0) audioChunks.push(event.data);
-                        };
-
-                        mediaRecorder.onstop = async () => {
-                            if (audioChunks.length === 0) {
-                                console.warn("No audio data recorded.");
-                                showConfirmationModal('Recording Error', 'No audio was recorded. Microphone might not be capturing input.');
-                                resetRecordingUI();
-                                return;
-                            }
-
-                            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-                            // Use a more specific filename if desired
-                            const audioFile = new File([audioBlob], `prescription_${currentPatientId}_${Date.now()}.webm`, { type: mediaRecorder.mimeType || 'audio/webm' });
-
-                            recordingStatus.style.display = 'none';
-                            processingStatus.style.display = 'block';
-                            startRecordingBtn.disabled = true;
-                            recordText.textContent = 'Processing AI...';
-
-                            const formData = new FormData();
-                            formData.append('audio', audioFile);
-                            formData.append('patientId', currentPatientId);
-
-                            try {
-                                console.log(`Sending audio for patient ${currentPatientId}...`);
-                                const response = await fetch(`${API_BASE_URL}/doctor/generate-prescription-from-speech`, {
-                                    method: 'POST',
-                                    body: formData,
-                                    credentials: 'include' // Crucial for authentication
-                                });
-
-                                const data = await response.json();
-                                console.log("Backend AI response:", data);
-
-                                if (response.ok && data.success) {
-                                    const structuredRx = data.structuredPrescription;
-                                    medicineNameInput.value = structuredRx.medicineName || '';
-                                    medicineDosageInput.value = structuredRx.dosage || '';
-                                    medicineAdviceInput.value = structuredRx.advice || '';
-                                    // Optional: Briefly show success before resetting button
-                                    processingStatus.textContent = '✅ Draft Ready!';
-                                    await new Promise(resolve => setTimeout(resolve, 1500)); // Show checkmark briefly
-                                } else {
-                                     // Provide specific feedback based on backend message
-                                     showConfirmationModal('AI Processing Failed', data.message || `Server error: ${response.status}. Please try again or enter manually.`);
-                                }
-                            } catch (error) {
-                                console.error('Error sending audio or processing AI response:', error);
-                                showConfirmationModal('Network Error', `Could not reach AI service: ${error.message}. Please check connection or enter manually.`);
-                            } finally {
-                                // Always reset the UI after processing attempt
-                                resetRecordingUI();
-                            }
-                        };
-
-                        mediaRecorder.start();
-                        isRecording = true;
-
-                        recordIcon.textContent = '■';
-                        recordText.textContent = 'Stop Recording';
-                        startRecordingBtn.style.backgroundColor = '#dc3545'; // Red color
-                        recordingStatus.style.display = 'block';
-                        processingStatus.style.display = 'none';
-                        clearPrescriptionForm(); // Clear fields for new recording
-
-                    } catch (err) {
-                        console.error('Error accessing microphone/starting recorder:', err);
-                        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                            showConfirmationModal('Permission Denied', 'Microphone access is required. Please allow permission in browser settings.');
-                        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                             showConfirmationModal('No Microphone', 'No microphone found on your device.');
-                        } else {
-                             showConfirmationModal('Microphone Error', 'Could not start recording. Ensure microphone is working and allowed.');
-                        }
-                        resetRecordingUI(false); // Keep button disabled if mic failed critically
-                    }
-                } else {
-                    // --- Stop Recording ---
-                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                         mediaRecorder.stop(); // This triggers the 'onstop' event
-                    }
-                     // UI reset happens within the 'onstop' handler after processing
-                }
-            });
-
-            // Set up listener for the form submission (digital prescription save)
-            // This listener should already exist in your setupFormsAndModals,
-            // ensure it correctly reads the patientId from prescriptionForm.dataset.patientId
-            // and sends the content of the input fields.
-             prescriptionForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const patientId = e.target.dataset.patientId; // Get patient context
-                if (!patientId) {
-                    showConfirmationModal('Error', 'No patient context. Please select a patient first.');
-                    return;
-                }
-                const medicineName = medicineNameInput.value.trim();
-                const dosage = medicineDosageInput.value.trim();
-                const advice = medicineAdviceInput.value.trim();
-
-                if (!medicineName || !dosage) {
-                    showConfirmationModal('Missing Info', 'Please ensure Medicine Name and Dosage Instructions are filled (either by AI or manually).');
-                    return;
-                }
-
-                // Show loading/saving state
-                const submitButton = prescriptionForm.querySelector('button[type="submit"]');
-                const originalButtonText = submitButton.textContent;
-                submitButton.textContent = 'Sending...';
-                submitButton.disabled = true;
-
-                try {
-                    const response = await fetch(`${API_BASE_URL}/doctor/create-digital-prescription`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json'},
-                        credentials: 'include',
-                        body: JSON.stringify({
-                            patientId,
-                            medicineName,
-                            dosage,
-                            advice
-                        })
-                    });
-                    // Check if the response was actually received and OK
-                     if (!response.ok) {
-                         // Try to get error message from backend if possible
-                         let errorMsg = `Server error: ${response.status}`;
-                         try {
-                              const errorData = await response.json();
-                              errorMsg = errorData.message || errorMsg;
-                         } catch(jsonError) { /* Ignore if response not JSON */ }
-                         throw new Error(errorMsg); // Throw error to be caught below
-                     }
-                    const data = await response.json();
-                    if (data.success) {
-                        showConfirmationModal('Prescription Sent', 'The digital prescription has been saved and sent to the patient.');
-                        // Optionally clear form and navigate away
-                        clearPrescriptionForm();
-                        resetRecordingUI(); // Reset mic button too
-                        showScreen('dashboardScreen');
-                    } else {
-                        throw new Error(data.message || 'Failed to save digital prescription.');
-                    }
-                } catch (error) {
-                    showConfirmationModal('Save Failed', `Error saving prescription: ${error.message}`);
-                } finally {
-                    submitButton.textContent = originalButtonText;
-                    submitButton.disabled = false;
-                }
-             });
+async function initializeWebRTC() {
+    try {
+        console.log('Doctor: Initializing WebRTC...');
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('WebRTC is not supported in this browser');
         }
-        // --- END OF setupAiPrescription FUNCTION ---
+        showConnectionStatus('Requesting camera and microphone permissions...', 'info');
+        const constraints = {
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        };
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        const localVideo = document.getElementById('localVideo');
+        if (localVideo) {
+            localVideo.srcObject = localStream;
+            await localVideo.play().catch(e => console.warn('Doctor: Local video play failed:', e));
+        }
+        await new Promise(resolve => setTimeout(resolve, 500)); // Short delay
+        createPeerConnection();
+        isCallActive = true;
+        showConnectionStatus('WebRTC ready. Click "Start Call" to begin.', 'success');
+    } catch (error) {
+        console.error('Doctor: Error accessing media devices:', error);
+        let msg = 'Could not access camera/microphone. Please check permissions.';
+        if (error.name === 'NotAllowedError') msg += ' Access was denied.';
+        else if (error.name === 'NotFoundError') msg += ' No camera/mic found.';
+        showConnectionStatus(msg, 'error');
+        // Optionally close call screen or disable call button here
+    }
+}
 
-            function showCallScreen(patientName, appointmentId) {
-                currentAppointmentId = appointmentId;
-                document.getElementById('consultationHeader').textContent = `Consultation with ${patientName}`;
-                showScreen('consultationScreen');
+function createPeerConnection() {
+    try {
+        console.log('Doctor: Creating peer connection...');
+        peerConnection = new RTCPeerConnection(configuration);
 
-                // Hide any existing connection status when showing call screen
-                hideConnectionStatus();
+        if (localStream) {
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        }
 
-                initializeWebRTC();
-            }
-
-            async function initializeWebRTC() {
-                try {
-                    console.log('Doctor: Initializing WebRTC...');
-
-                    // Check if WebRTC is supported
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        throw new Error('WebRTC is not supported in this browser');
-                    }
-
-                    // Show loading state
-                    showConnectionStatus('Requesting camera and microphone permissions...', 'info');
-
-                    // Request camera and microphone permissions with better constraints
-                    const constraints = {
-                        video: {
-                            width: { ideal: 640, max: 1280 },
-                            height: { ideal: 480, max: 720 },
-                            facingMode: "user"
-                        },
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        }
-                    };
-
-                    console.log('Doctor: Requesting media permissions...');
-                    localStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-                    console.log('Doctor: Media permissions granted, setting up video...');
-                    const localVideo = document.getElementById('localVideo');
-                    if (localVideo) {
-                        localVideo.srcObject = localStream;
-                        try {
-                            await localVideo.play();
-                            console.log('Doctor: Local video playing successfully');
-                        } catch (playError) {
-                            console.warn('Doctor: Local video play failed:', playError);
-                        }
-                    }
-
-                    // Wait a bit before creating peer connection to avoid race conditions
-                    await new Promise(resolve => setTimeout(resolve, 500));
-
-                    createPeerConnection();
-                    isCallActive = true;
-                    console.log('Doctor: WebRTC initialized successfully');
-
-                    // Update status
-                    showConnectionStatus('WebRTC ready. Click "Start Call" to begin.', 'success');
-
-                } catch (error) {
-                    console.error('Doctor: Error accessing media devices:', error);
-
-                    let errorMessage = 'Could not access camera/microphone. ';
-
-                    if (error.name === 'NotAllowedError') {
-                        errorMessage += 'Please allow camera and microphone permissions and try again.';
-                    } else if (error.name === 'NotFoundError') {
-                        errorMessage += 'No camera or microphone found.';
-                    } else if (error.name === 'NotSupportedError') {
-                        errorMessage += 'WebRTC is not supported in this browser. Please use Chrome, Firefox, or Safari.';
-                    } else if (error.name === 'NotReadableError') {
-                        errorMessage += 'Camera or microphone is already in use by another application.';
-                    } else {
-                        errorMessage += 'Please check your camera and microphone permissions.';
-                    }
-
-                    showConnectionStatus(errorMessage, 'error');
-                    throw error; // Re-throw to be handled by caller
+        peerConnection.ontrack = event => {
+            console.log('Doctor: Received remote stream from patient', event.streams[0]);
+            const remoteVideo = document.getElementById('remoteVideo');
+            if (remoteVideo && event.streams[0]) {
+                if (remoteVideo.srcObject !== event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                    playRemoteVideo(remoteVideo); // Use helper to play
                 }
             }
+        };
 
-            function createPeerConnection() {
-                try {
-                    console.log('Doctor: Creating peer connection...');
-                    peerConnection = new RTCPeerConnection(configuration);
+        peerConnection.onconnectionstatechange = () => {
+             console.log('Doctor: Connection state:', peerConnection.connectionState);
+             switch(peerConnection.connectionState) {
+                case 'connected':
+                    showConnectionStatus('Connected successfully!', 'success');
+                    const startBtn = document.getElementById('startCallBtn');
+                    if(startBtn) { startBtn.textContent = 'Call Active'; /* Don't disable for doctor */ }
+                    break;
+                case 'failed':
+                    handleConnectionFailure();
+                    break;
+                case 'connecting':
+                    showConnectionStatus('Connecting to patient...', 'info');
+                    break;
+                case 'disconnected':
+                     showConnectionStatus('Reconnecting...', 'warning');
+                     handlePeerDisconnection();
+                     break;
+                case 'closed':
+                    hideConnectionStatus();
+                    break;
+             }
+        };
 
-                    // Add local doctor's stream tracks
-                    if (localStream) {
-                        localStream.getTracks().forEach(track => {
-                            console.log('Doctor: Adding track:', track.kind);
-                            peerConnection.addTrack(track, localStream);
-                        });
-                    }
+         peerConnection.onsignalingstatechange = () => console.log('Doctor: Signaling state:', peerConnection.signalingState);
+         peerConnection.oniceconnectionstatechange = () => console.log('ICE connection state:', peerConnection.iceConnectionState);
 
-                    // Handle remote stream from patient
-                    peerConnection.ontrack = event => {
-                        console.log('Doctor: Received remote stream from patient', event.streams[0]);
-                        console.log('Doctor: Stream tracks:', event.streams[0].getTracks());
 
-                        const remoteVideo = document.getElementById('remoteVideo');
-                        if (remoteVideo && event.streams[0]) {
-                            // Check if srcObject is already set to avoid unnecessary changes
-                            if (remoteVideo.srcObject !== event.streams[0]) {
-                                console.log('Doctor: Attaching remote stream to video element');
-                                remoteVideo.srcObject = event.streams[0];
-                            }
+        peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+                console.log('Doctor: Sending ICE candidate');
+                sendSignalingMessage('ice', event.candidate);
+            }
+        };
 
-                            // More robust play method to handle race conditions and autoplay policies
-                            const playVideo = async (videoElement, retryCount = 0) => {
-                                try {
-                                    console.log('Doctor: Attempting to play remote video, attempt:', retryCount + 1);
+        // Handle incoming data channels from patient
+        peerConnection.ondatachannel = event => {
+            console.log('Doctor: Received data channel:', event.channel.label);
+            if (event.channel.label === 'messages') {
+                dataChannel = event.channel;
+                setupDataChannelEvents(dataChannel);
+            }
+        };
 
-                                    // Wait for the srcObject to be fully loaded
-                                    await new Promise(resolve => setTimeout(resolve, 200));
+        console.log('Doctor: Peer connection created successfully');
+    } catch (error) {
+        console.error('Doctor: Error creating peer connection:', error);
+        alert('Failed to create video connection.');
+    }
+}
 
-                                    if (!videoElement) {
-                                        console.error('Doctor: Video element not found');
-                                        return;
-                                    }
+// Helper to set up data channel event listeners
+function setupDataChannelEvents(channel) {
+    channel.onmessage = event => console.log(`Doctor: Patient message: ${event.data}`); // Just log for now
+    channel.onopen = () => console.log('Doctor: Data channel opened');
+    channel.onclose = () => console.log('Doctor: Data channel closed');
+    channel.onerror = (error) => console.error('Doctor: Data channel error:', error);
+}
 
-                                    // Check if video is already playing
-                                    if (!videoElement.paused && !videoElement.ended) {
-                                        console.log('Doctor: Remote video is already playing');
-                                        showConnectionStatus('Remote video connected and playing!', 'success');
-                                        return;
-                                    }
+// Helper to play remote video robustly
+async function playRemoteVideo(videoElement, retryCount = 0) {
+     try {
+         console.log(`Doctor: Attempting to play remote video (Attempt ${retryCount + 1})`);
+         await videoElement.play();
+         console.log('Doctor: Remote video playing successfully');
+         showConnectionStatus('Remote video connected!', 'success'); // Update status
+     } catch (e) {
+         console.warn(`Doctor: Remote video play failed (Attempt ${retryCount + 1}):`, e);
+         if (e.name === 'NotAllowedError') {
+             showConnectionStatus('Video autoplay blocked. Click video to play.', 'warning');
+             videoElement.addEventListener('click', () => playRemoteVideo(videoElement), { once: true });
+         } else if (retryCount < 3) {
+             setTimeout(() => playRemoteVideo(videoElement, retryCount + 1), 500); // Retry shortly
+         } else {
+              showConnectionStatus('Could not play remote video.', 'error');
+         }
+     }
+}
 
-                                    // Try to play the video
-                                    await videoElement.play();
-                                    console.log('Doctor: Remote video playing successfully');
+async function startCall() {
+    if (!peerConnection || !localStream || peerConnection.signalingState !== 'stable') {
+        console.warn('Doctor: Cannot start call. PC State:', peerConnection?.signalingState, 'Stream:', !!localStream);
+        if (peerConnection?.signalingState === 'have-remote-offer') {
+            return await answerCall(); // Patient initiated
+        }
+        return;
+    }
+    console.log('Doctor: Starting call...');
+    isInitiator = true;
+    try {
+        const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+        await peerConnection.setLocalDescription(offer);
+        await sendSignalingMessageWithRetry('offer', offer);
+        const startBtn = document.getElementById('startCallBtn');
+        if(startBtn) { startBtn.disabled = true; startBtn.textContent = 'Connecting...'; }
+    } catch (error) {
+        console.error('Doctor: Error starting call:', error);
+        handleConnectionFailure(); // Treat offer/setDesc failure as connection failure
+    }
+}
 
-                                    // Update UI to show video is connected
-                                    showConnectionStatus('Remote video connected and playing!', 'success');
+async function answerCall() {
+     if (!peerConnection || peerConnection.signalingState !== 'have-remote-offer') {
+         console.warn('Doctor: Cannot answer call in current state:', peerConnection?.signalingState);
+         return;
+     }
+     console.log('Doctor: Answering call...');
+    try {
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        await sendSignalingMessageWithRetry('answer', answer); // Use retry for answer too
+        const startBtn = document.getElementById('startCallBtn');
+        // Keep button enabled, maybe change text slightly if desired
+        if(startBtn) { startBtn.textContent = 'Call Active'; startBtn.disabled = false; }
+    } catch (error) {
+        console.error('Doctor: Error answering call:', error);
+        handleConnectionFailure(); // Treat answer/setDesc failure as connection failure
+    }
+}
 
-                                    // Update button text
-                                    const startCallBtn = document.getElementById('startCallBtn');
-                                    if (startCallBtn) {
-                                        startCallBtn.textContent = 'Call Active';
-                                    }
+async function handleSignalingMessage(type, data) {
+    if (!peerConnection) {
+        console.warn('Doctor: Peer connection not ready for signaling message');
+        return;
+    }
+     console.log(`Doctor: Handling ${type}, PC State: ${peerConnection.signalingState}`);
 
-                                } catch (e) {
-                                    console.warn('Doctor: Remote video play failed:', e);
-
-                                    if (e.name === 'NotAllowedError') {
-                                        console.error('Doctor: Video autoplay blocked by browser policy');
-                                        showConnectionStatus('Video autoplay blocked. Click to enable video.', 'warning');
-
-                                        // Add click handler to enable video
-                                        videoElement.addEventListener('click', () => {
-                                            videoElement.play().then(() => {
-                                                console.log('Doctor: Video enabled by user click');
-                                                showConnectionStatus('Video enabled successfully!', 'success');
-                                            }).catch(err => console.error('Doctor: Failed to enable video:', err));
-                                        }, { once: true });
-
-                                    } else if (e.name === 'AbortError' && retryCount < 3) {
-                                        console.log('Doctor: Video play aborted, retrying...');
-                                        setTimeout(() => playVideo(videoElement, retryCount + 1), 500);
-                                    } else {
-                                        console.error('Doctor: Remote video play failed permanently:', e);
-                                        showConnectionStatus('Video connection issue: ' + e.message, 'error');
-                                    }
-                                }
-                            };
-
-                            playVideo(remoteVideo);
-                        } else {
-                            console.error('Doctor: Remote video element or stream not found');
-                        }
-                    };
-
-                    // Handle connection state changes
-                    peerConnection.onconnectionstatechange = () => {
-                        console.log('Doctor: Connection state changed to:', peerConnection.connectionState);
-                        console.log('Doctor: Signaling state:', peerConnection.signalingState);
-
-                        if (peerConnection.connectionState === 'connected') {
-                            console.log('Doctor: Connected to patient successfully');
-                            showConnectionStatus('Connected successfully!', 'success');
-                            // Update UI to show connected state
-                            const endCallBtn = document.querySelector('#consultationScreen .btn-sos');
-                            if (endCallBtn) endCallBtn.textContent = 'End Call';
-                        } else if (peerConnection.connectionState === 'failed') {
-                            console.error('Doctor: Connection failed');
-                            showConnectionStatus('Connection failed. Please try again.', 'error');
-                            handleConnectionFailure();
-                        } else if (peerConnection.connectionState === 'connecting') {
-                            console.log('Doctor: Attempting to connect...');
-                            showConnectionStatus('Connecting to patient...', 'info');
-                        } else if (peerConnection.connectionState === 'new') {
-                            console.log('Doctor: New connection state');
-                            hideConnectionStatus();
-                        } else if (peerConnection.connectionState === 'disconnected') {
-                            console.log('Doctor: Disconnected from patient');
-                            showConnectionStatus('Reconnecting...', 'warning');
-                            handlePeerDisconnection();
-                        } else if (peerConnection.connectionState === 'closed') {
-                            console.log('Doctor: Connection closed');
-                            hideConnectionStatus();
-                        }
-                    };
-
-                    // Handle signaling state changes for debugging
-                    peerConnection.onsignalingstatechange = () => {
-                        console.log('Doctor: Signaling state changed to:', peerConnection.signalingState);
-                    };
-
-                    // Enhanced track event debugging
-                    peerConnection.onaddstream = event => {
-                        console.log('Doctor: Stream added:', event.stream);
-                        console.log('Doctor: Stream tracks:', event.stream.getTracks());
-                    };
-
-                    // Monitor track events for debugging
-                    localStream.getTracks().forEach(track => {
-                        track.onended = () => {
-                            console.warn('Doctor: Local track ended:', track.kind);
-                            showConnectionStatus(`Local ${track.kind} track ended`, 'warning');
-                        };
-                        track.onmute = () => {
-                            console.warn('Doctor: Local track muted:', track.kind);
-                        };
-                        track.onunmute = () => {
-                            console.log('Doctor: Local track unmuted:', track.kind);
-                        };
-                    });
-
-                    // Handle ICE candidates
-                    peerConnection.onicecandidate = event => {
-                        if (event.candidate) {
-                            console.log('Doctor: Sending ICE candidate');
-                            sendSignalingMessage('ice', event.candidate);
-                        }
-                    };
-
-                    // Handle incoming data channels from patient
-                    peerConnection.ondatachannel = event => {
-                        console.log('Doctor: Received data channel:', event.channel.label);
-                        if (event.channel.label === 'messages') {
-                            dataChannel = event.channel;
-                            dataChannel.onmessage = event => {
-                                console.log(`Doctor: Patient message: ${event.data}`);
-                                // You can add UI updates here to show patient messages
-                            };
-                            dataChannel.onopen = () => console.log('Doctor: Data channel opened with patient');
-                            dataChannel.onclose = () => console.log('Doctor: Data channel closed with patient');
-                        }
-                    };
-
-                    console.log('Doctor: Peer connection created successfully');
-                } catch (error) {
-                    console.error('Doctor: Error creating peer connection:', error);
-                    alert('Failed to create video connection. Please refresh and try again.');
+    try {
+        if (type === 'offer') {
+            if (peerConnection.signalingState !== 'stable') {
+                // Handle offer collision based on role (Doctor usually prioritizes if patient ID is higher, adjust logic if needed)
+                const shouldDoctorBeCaller = currentAppointmentId.localeCompare('demo') > 0; // Example logic
+                if (peerConnection.signalingState === 'have-local-offer' && !shouldDoctorBeCaller) {
+                    console.log("Collision: Doctor becomes callee, resetting.");
+                    await resetConnection(); // Reset and wait for the offer again
+                } else if (peerConnection.signalingState === 'have-local-offer' && shouldDoctorBeCaller) {
+                    console.log("Collision: Doctor is initiator, ignoring patient's offer.");
+                    return; // Ignore the incoming offer
+                } else {
+                    console.warn("Doctor: Received offer in unexpected state:", peerConnection.signalingState);
+                    return;
                 }
             }
-            async function handleSignalingMessage(type, data) {
-                try {
-                    console.log(`Doctor: Handling ${type} signaling message`);
-                    console.log(`Doctor: Current signaling state: ${peerConnection?.signalingState}`);
-                    console.log(`Doctor: Current connection state: ${peerConnection?.connectionState}`);
+             await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+             await answerCall(); // Create and send answer
 
-                    if (!peerConnection) {
-                        console.warn('Doctor: Peer connection not initialized');
-                        return;
-                    }
-
-                    if (type === 'offer') {
-                        console.log('Doctor: Received offer from patient');
-
-                        // Check if we're already handling an offer or in a call
-                        if (peerConnection.signalingState === 'have-remote-offer') {
-                            console.log('Doctor: Already have a remote offer, ignoring duplicate');
-                            return;
-                        }
-
-                        if (peerConnection.signalingState === 'have-local-offer') {
-                            console.log('Doctor: Collision detected - both peers trying to call');
-                            console.log('Doctor: Doctor sent offer, patient also sent offer');
-
-                            // Implement proper collision resolution
-                            // Since both sent offers, we need to decide who becomes the caller
-                            // Use a simple deterministic approach based on appointment ID
-                            const shouldBeCaller = currentAppointmentId.localeCompare('demo') > 0;
-
-                            if (shouldBeCaller) {
-                                console.log('Doctor: Doctor becomes caller due to appointment ID priority');
-                                // Doctor becomes caller - ignore patient's offer and continue with doctor's offer
-                                return;
-                            } else {
-                                console.log('Doctor: Patient becomes caller, doctor becomes callee');
-                                // Doctor becomes callee - reset and accept patient's offer
-                                resetConnection();
-                            }
-                        }
-
-                        console.log('Doctor: Setting remote description with patient\'s offer...');
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-
-                        console.log('Doctor: Creating answer...');
-                        const answer = await peerConnection.createAnswer();
-
-                        console.log('Doctor: Setting local description with answer...');
-                        await peerConnection.setLocalDescription(answer);
-
-                        console.log('Doctor: Sending answer via signaling...');
-                        sendSignalingMessage('answer', answer);
-
-                        console.log('Doctor: Successfully answered patient\'s call');
-                        return;
-                    } else if (type === 'answer') {
-                        console.log('Doctor: Received answer, setting remote description...');
-                        if (peerConnection.signalingState === 'have-local-offer') {
-                            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-                            console.log('Doctor: Remote description set successfully');
-
-                            // Process any queued candidates after setting the description
-                            if (iceCandidateQueue.length > 0) {
-                                console.log(`Doctor: Processing ${iceCandidateQueue.length} queued ICE candidates`);
-                                for (const candidate of iceCandidateQueue) {
-                                    try {
-                                        await peerConnection.addIceCandidate(candidate);
-                                        console.log('Doctor: Queued ICE candidate added successfully');
-                                    } catch (error) {
-                                        console.warn('Doctor: Failed to add queued candidate:', error);
-                                    }
-                                }
-                                iceCandidateQueue = [];
-                            }
-                        } else {
-                            console.warn('Doctor: Cannot handle answer - wrong signaling state:', peerConnection.signalingState);
-                            console.warn('Doctor: Expected "have-local-offer" but got:', peerConnection.signalingState);
-
-                            // If we're in stable state but expecting an answer, this indicates a collision
-                            if (peerConnection.signalingState === 'stable') {
-                                console.log('Doctor: Detected collision - both peers trying to call. Doctor will wait...');
-                                // Wait for the patient's offer to arrive and be processed
-                                setTimeout(() => {
-                                    if (peerConnection && peerConnection.signalingState === 'stable') {
-                                        console.log('Doctor: No patient offer received, retrying as caller...');
-                                        startCall();
-                                    }
-                                }, 2000);
-                            }
-                        }
-                    } else if (type === 'ice') {
-                        console.log('Doctor: Received ICE candidate');
-                        const candidate = new RTCIceCandidate(data);
-
-                        if (peerConnection.remoteDescription) {
-                            try {
-                                await peerConnection.addIceCandidate(candidate);
-                                console.log('Doctor: ICE candidate added successfully');
-                            } catch (error) {
-                                console.warn('Doctor: Failed to add ICE candidate:', error);
-                            }
-                        } else {
-                            console.log('Doctor: Queueing ICE candidate (no remote description yet)');
-                            iceCandidateQueue.push(candidate);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Doctor: Error handling signaling message:', error);
-                    console.error('Doctor: Signaling state:', peerConnection?.signalingState);
-                    console.error('Doctor: Connection state:', peerConnection?.connectionState);
-                    console.error('Doctor: Error details:', error.message);
-                }
+        } else if (type === 'answer') {
+            if (peerConnection.signalingState === 'have-local-offer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+                processQueuedIceCandidates(); // Process any queued candidates now
+            } else {
+                 console.warn('Doctor: Received answer in unexpected state:', peerConnection.signalingState);
             }
-
-            function sendSignalingMessage(type, data) {
-                console.log(`Doctor: Sending ${type} via signaling`);
-                fetch(`${API_BASE_URL}/webrtc/${type}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
-                }).catch(error => {
-                    console.error('Doctor: Signaling error:', error);
-                    // Retry signaling after a short delay
-                    setTimeout(() => {
-                        console.log(`Doctor: Retrying ${type} signaling`);
-                        sendSignalingMessage(type, data);
-                    }, 2000);
-                });
+        } else if (type === 'ice') {
+            const candidate = new RTCIceCandidate(data);
+            if (peerConnection.remoteDescription) {
+                await peerConnection.addIceCandidate(candidate);
+            } else {
+                console.log('Doctor: Queueing ICE candidate');
+                iceCandidateQueue.push(candidate);
             }
+        }
+    } catch (error) {
+        console.error(`Doctor: Error handling ${type} signaling:`, error);
+        // handleConnectionFailure(); // May be too aggressive
+    }
+}
 
-            async function sendSignalingMessageWithRetry(type, data) {
-                return new Promise((resolve, reject) => {
-                    const attemptSend = (attemptNumber) => {
-                        console.log(`Doctor: Sending ${type} via signaling (attempt ${attemptNumber})`);
+// Helper function to process queued ICE candidates
+async function processQueuedIceCandidates() {
+    while (iceCandidateQueue.length > 0) {
+        const candidate = iceCandidateQueue.shift();
+        try {
+            await peerConnection.addIceCandidate(candidate);
+            console.log('Doctor: Processed queued ICE candidate');
+        } catch (error) {
+            console.warn('Doctor: Error adding queued ICE candidate:', error);
+        }
+    }
+}
 
-                        fetch(`${API_BASE_URL}/webrtc/${type}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
-                        }).then(() => {
-                            console.log(`Doctor: ${type} sent successfully`);
-                            resolve();
-                        }).catch(error => {
-                            console.error(`Doctor: Signaling error on attempt ${attemptNumber}:`, error);
 
-                            if (attemptNumber < maxRetries) {
-                                const delay = retryDelay * Math.pow(2, attemptNumber - 1);
-                                console.log(`Doctor: Retrying ${type} in ${delay}ms...`);
-                                setTimeout(() => attemptSend(attemptNumber + 1), delay);
-                            } else {
-                                console.error(`Doctor: Max retries reached for ${type}`);
-                                reject(error);
-                            }
-                        });
-                    };
-
-                    attemptSend(1);
-                });
+// Function to send signaling messages via fetch, WITH RETRY
+async function sendSignalingMessageWithRetry(type, data) {
+    let attempt = 0;
+    while (attempt < maxRetries) {
+        try {
+            console.log(`Doctor: Sending ${type} (Attempt ${attempt + 1})`);
+            // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
+            const response = await fetch(`${API_BASE_URL}/v1/webrtc/${type}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            console.log(`Doctor: ${type} sent successfully.`);
+            return; // Success
+        } catch (error) {
+            attempt++;
+            console.error(`Doctor: Signaling error (Attempt ${attempt}):`, error);
+            if (attempt >= maxRetries) {
+                 console.error(`Doctor: Max retries reached for ${type}.`);
+                 throw error; // Re-throw after max retries
             }
+            const delay = retryDelay * Math.pow(2, attempt -1); // Exponential backoff
+            console.log(`Doctor: Retrying ${type} in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
 
-            async function startCall() {
-                try {
-                    if (!peerConnection) {
-                        throw new Error('Peer connection not initialized');
-                    }
+// Keep the non-retry version if needed elsewhere, but prefer the retry one for offers/answers
+function sendSignalingMessage(type, data) {
+    // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
+    fetch(`${API_BASE_URL}/v1/webrtc/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
+    }).catch(error => console.error('Doctor: Signaling error:', error));
+}
 
-                    if (!localStream) {
-                        throw new Error('Local stream not available');
-                    }
 
-                    console.log('Doctor: Starting call, current signaling state:', peerConnection.signalingState);
+function pollSignaling() {
+    if (!currentAppointmentId || !isCallActive) return; // Only poll if call is active
 
-                    // Check if we're already in a call or have an offer pending
-                    if (peerConnection.signalingState !== 'stable') {
-                        console.log('Doctor: Not in stable state, cannot create offer. Current state:', peerConnection.signalingState);
-
-                        // If we're in 'have-remote-offer' state, it means patient initiated the call
-                        if (peerConnection.signalingState === 'have-remote-offer') {
-                            console.log('Doctor: Patient initiated the call, creating answer instead...');
-                            return await answerCall();
-                        }
-
-                        console.log('Doctor: Waiting for stable state before creating offer...');
-                        return;
-                    }
-
-                    // Set initiator role
-                    isInitiator = true;
-
-                    console.log('Doctor: Creating offer...');
-                    const offer = await peerConnection.createOffer({
-                        offerToReceiveAudio: true,
-                        offerToReceiveVideo: true
-                    });
-
-                    console.log('Doctor: Setting local description...');
-                    await peerConnection.setLocalDescription(offer);
-
-                    console.log('Doctor: Sending offer via signaling...');
-                    await sendSignalingMessageWithRetry('offer', offer);
-
-                    // Update UI
-                    const startCallBtn = document.getElementById('startCallBtn');
-                    if (startCallBtn) {
-                        startCallBtn.disabled = true;
-                        startCallBtn.textContent = 'Connecting...';
-                    }
-
-                    console.log('Doctor: Call started successfully');
-                } catch (error) {
-                    console.error('Doctor: Error starting call:', error);
-                    console.error('Doctor: Signaling state:', peerConnection.signalingState);
-                    console.error('Doctor: Connection state:', peerConnection.connectionState);
-
-                    if (retryCount < maxRetries) {
-                        retryCount++;
-                        console.log(`Doctor: Retrying call start (${retryCount}/${maxRetries}) in ${retryDelay}ms...`);
-                        setTimeout(() => startCall(), retryDelay);
-                        retryDelay *= 2; // Exponential backoff
-                    } else {
-                        console.error('Doctor: Max retries reached, giving up');
-                        alert('Failed to start call after multiple attempts. Please refresh and try again.');
-                        retryCount = 0;
-                        retryDelay = 1000;
-                    }
-                }
+    // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
+    fetch(`${API_BASE_URL}/v1/webrtc/poll?appointmentId=${currentAppointmentId}`)
+        .then(response => response.ok ? response.json() : Promise.reject(`HTTP ${response.status}`))
+        .then(messages => {
+            if (messages && messages.length > 0) {
+                 messages.forEach(msg => handleSignalingMessage(msg.type, msg.data));
             }
-            // In doctor.html, inside the <script> block
+        })
+        .catch(error => console.error('Doctor: Polling error:', error));
+}
 
-        // In doctor.html, inside the <script> block
+// UI Status Functions (showConnectionStatus, hideConnectionStatus, etc.) - Keep these
+function showConnectionStatus(message, type = 'info') {
+    const statusDiv = document.getElementById('connectionStatus');
+    const statusText = document.getElementById('statusText');
+    if (statusDiv && statusText) {
+        statusText.textContent = message;
+        let bgColor = 'rgba(0, 0, 0, 0.1)';
+        let color = 'inherit';
+        if (type === 'success') { bgColor = 'rgba(34, 197, 94, 0.2)'; color = '#16a34a'; }
+        else if (type === 'error') { bgColor = 'rgba(239, 68, 68, 0.2)'; color = '#ef4444'; }
+        else if (type === 'warning') { bgColor = 'rgba(245, 158, 11, 0.2)'; color = '#f59e0b'; }
+        statusDiv.style.background = bgColor;
+        statusDiv.style.color = color;
+        statusDiv.style.display = 'block';
+    }
+}
+
+function hideConnectionStatus() {
+    const statusDiv = document.getElementById('connectionStatus');
+    if (statusDiv) statusDiv.style.display = 'none';
+}
+
+// You might not need toggleAudio/toggleVideo if the buttons aren't in doctor UI
+// function toggleAudio() { ... }
+// function toggleVideo() { ... }
+
+function endCall() {
+    console.log('Doctor: Ending call...');
+    isCallActive = false; // Stop polling and prevent retries
+
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+     if (dataChannel) {
+        dataChannel.close();
+        dataChannel = null;
+    }
+
+    // Reset UI specific to doctor
+    showScreen('dashboardScreen'); // Go back to dashboard
+    const remoteVideo = document.getElementById('remoteVideo');
+    const localVideo = document.getElementById('localVideo');
+    if (remoteVideo) remoteVideo.srcObject = null;
+    if (localVideo) localVideo.srcObject = null;
+    const startBtn = document.getElementById('startCallBtn');
+     if(startBtn) { startBtn.disabled = false; startBtn.textContent = 'Start Call'; }
+    // Reset mute buttons if they exist
+
+    // Reset state variables
+    currentAppointmentId = null;
+    iceCandidateQueue = [];
+    isInitiator = false;
+    retryCount = 0;
+    retryDelay = 1000;
+    hideConnectionStatus();
+}
+
+// --- Connection Failure Handling ---
+function handleConnectionFailure() {
+    console.error('Doctor: Connection failure detected.');
+    showConnectionStatus('Connection failed. Please check internet and permissions.', 'error');
+    console.error('PC State:', { /* ... log states ... */ });
+    endCall(); // End the attempt
+    showConfirmationModal('Call Failed', 'Could not establish video connection.');
+}
+
+// Handle disconnection
+function handlePeerDisconnection() {
+    console.log('Doctor: Peer disconnected.');
+    showConnectionStatus('Patient disconnected. Attempting to reconnect...', 'warning');
+    // WebRTC might handle reconnection, otherwise state will eventually go to 'failed'
+}
+
+// Reset connection logic
+async function resetConnection() {
+    console.log("Doctor: Resetting connection...");
+    const wasActive = isCallActive;
+    isCallActive = false;
+    endCall();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    isCallActive = wasActive;
+    initializeWebRTC();
+}
+
 // REPLACE your async showPatientSummary with this improved version:
 
 async function showPatientSummary(appointmentId) {
@@ -1331,290 +977,6 @@ async function showPatientSummary(appointmentId) {
     }
 }
 
-            async function answerCall() {
-                try {
-                    if (!peerConnection) {
-                        throw new Error('Peer connection not initialized');
-                    }
-
-                    console.log('Doctor: Answering call, creating answer...');
-
-                    const answer = await peerConnection.createAnswer({
-                        offerToReceiveAudio: true,
-                        offerToReceiveVideo: true
-                    });
-
-                    console.log('Doctor: Setting local description with answer...');
-                    await peerConnection.setLocalDescription(answer);
-
-                    console.log('Doctor: Sending answer via signaling...');
-                    sendSignalingMessage('answer', answer);
-
-                    console.log('Doctor: Answer sent successfully');
-                } catch (error) {
-                    console.error('Doctor: Error answering call:', error);
-                    alert('Failed to answer call: ' + error.message);
-                }
-            }
-
-            function handleConnectionFailure() {
-                console.error('Doctor: Connection failure detected');
-
-                // Get detailed error information
-                let errorDetails = 'Unknown error occurred';
-                if (peerConnection) {
-                    errorDetails = `Connection State: ${peerConnection.connectionState}, Signaling State: ${peerConnection.signalingState}, ICE State: ${peerConnection.iceConnectionState}`;
-                    console.error('Doctor: Detailed connection info:', {
-                        connectionState: peerConnection.connectionState,
-                        signalingState: peerConnection.signalingState,
-                        iceConnectionState: peerConnection.iceConnectionState,
-                        iceGatheringState: peerConnection.iceGatheringState
-                    });
-                }
-
-                // Show detailed error message
-                const errorMessage = `Video call connection failed.
-Details: ${errorDetails}
-
-Possible solutions:
-• Check your internet connection
-• Allow camera and microphone permissions
-• Try refreshing the page
-• Contact support if the issue persists`;
-
-                showConfirmationModal('Connection Failed', errorMessage);
-
-                // Reset call state
-                endCall();
-            }
-
-            function resetConnection() {
-                console.log('Doctor: Resetting connection due to collision...');
-
-                // Close existing connection
-                if (peerConnection) {
-                    peerConnection.close();
-                    peerConnection = null;
-                }
-
-                // Clear queues
-                iceCandidateQueue = [];
-
-                // Reset retry state
-                retryCount = 0;
-                retryDelay = 1000;
-
-                // Create new peer connection
-                createPeerConnection();
-
-                console.log('Doctor: Connection reset complete');
-            }
-
-            function handlePeerDisconnection() {
-                console.log('Doctor: Peer disconnected, attempting to reconnect...');
-
-                // Show reconnection status to user
-                const endCallBtn = document.querySelector('#consultationScreen .btn-sos');
-                if (endCallBtn) {
-                    endCallBtn.textContent = 'Reconnecting...';
-                    endCallBtn.disabled = true;
-                }
-
-                // Attempt to reconnect after a short delay
-                setTimeout(() => {
-                    if (isCallActive && peerConnection) {
-                        console.log('Doctor: Attempting to reconnect...');
-                        startCall();
-                    }
-                }, 2000);
-            }
-
-            function pollSignaling() {
-                if (!currentAppointmentId) return;
-
-                fetch(`${API_BASE_URL}/webrtc/poll?appointmentId=${currentAppointmentId}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        return response.json();
-                    })
-                    .then(messages => {
-                        if (messages && messages.length > 0) {
-                            console.log(`Doctor: Received ${messages.length} signaling messages`);
-                            messages.forEach((msg, index) => {
-                                console.log(`Doctor: Processing message ${index + 1}:`, msg);
-                                handleSignalingMessage(msg.type, msg.data);
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Doctor: Polling error:', error);
-                        // Don't show error to user for polling failures, just log them
-                    });
-            }
-
-            function showConnectionStatus(message, type = 'info') {
-                const statusDiv = document.getElementById('connectionStatus');
-                const statusText = document.getElementById('statusText');
-
-                if (statusDiv && statusText) {
-                    statusText.textContent = message;
-
-                    // Set color based on type
-                    switch (type) {
-                        case 'success':
-                            statusDiv.style.background = 'rgba(34, 197, 94, 0.2)';
-                            statusDiv.style.color = '#16a34a';
-                            break;
-                        case 'error':
-                            statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
-                            statusDiv.style.color = '#ef4444';
-                            break;
-                        case 'warning':
-                            statusDiv.style.background = 'rgba(245, 158, 11, 0.2)';
-                            statusDiv.style.color = '#f59e0b';
-                            break;
-                        default:
-                            statusDiv.style.background = 'rgba(0, 0, 0, 0.1)';
-                            statusDiv.style.color = 'inherit';
-                    }
-
-                    statusDiv.style.display = 'block';
-                }
-            }
-
-            function hideConnectionStatus() {
-                const statusDiv = document.getElementById('connectionStatus');
-                if (statusDiv) {
-                    statusDiv.style.display = 'none';
-                }
-            }
-
-            function showVideoStatus(message, type = 'info') {
-                const statusDiv = document.getElementById('videoStatus');
-                const statusText = document.getElementById('videoStatusText');
-
-                if (statusDiv && statusText) {
-                    statusText.textContent = message;
-
-                    // Set color based on type
-                    switch (type) {
-                        case 'success':
-                            statusDiv.style.color = '#16a34a';
-                            break;
-                        case 'error':
-                            statusDiv.style.color = '#ef4444';
-                            break;
-                        case 'warning':
-                            statusDiv.style.color = '#f59e0b';
-                            break;
-                        default:
-                            statusDiv.style.color = 'inherit';
-                    }
-
-                    statusDiv.style.display = 'block';
-                }
-            }
-
-            function hideVideoStatus() {
-                const statusDiv = document.getElementById('videoStatus');
-                if (statusDiv) {
-                    statusDiv.style.display = 'none';
-                }
-            }
-            
-            function endCall() {
-                try {
-                    console.log('Doctor: Ending call...');
-
-                    // Stop local media tracks
-                    if (localStream) {
-                        localStream.getTracks().forEach(track => {
-                            console.log('Doctor: Stopping track:', track.kind);
-                            track.stop();
-                        });
-                        localStream = null;
-                    }
-
-                    // Close peer connection
-                    if (peerConnection) {
-                        peerConnection.close();
-                        peerConnection = null;
-                    }
-
-                    // Close data channel
-                    if (dataChannel) {
-                        dataChannel.close();
-                        dataChannel = null;
-                    }
-
-                    // Reset state
-                    currentAppointmentId = null;
-                    isCallActive = false;
-                    iceCandidateQueue = [];
-                    isInitiator = false;
-                    retryCount = 0;
-                    retryDelay = 1000;
-
-                    // Reset UI
-                    const startCallBtn = document.getElementById('startCallBtn');
-                    if (startCallBtn) {
-                        startCallBtn.disabled = false;
-                        startCallBtn.textContent = 'Start Call';
-                    }
-
-                    // Hide connection status when call ends
-                    hideConnectionStatus();
-
-                    // Go back to dashboard
-                    showScreen('dashboardScreen');
-
-                    console.log('Doctor: Call ended successfully');
-                } catch (error) {
-                    console.error('Doctor: Error ending call:', error);
-                }
-            }
-
-            // Test function for debugging WebRTC issues
-            function testWebRTCConnection() {
-                console.log('Doctor: Testing WebRTC connection...');
-
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    console.error('Doctor: WebRTC not supported');
-                    showConnectionStatus('WebRTC not supported in this browser', 'error');
-                    return false;
-                }
-
-                // Test media device access
-                navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                    .then(stream => {
-                        console.log('Doctor: Media device test successful');
-                        stream.getTracks().forEach(track => track.stop()); // Stop test stream
-                        showConnectionStatus('WebRTC test successful - ready for calls', 'success');
-                        return true;
-                    })
-                    .catch(error => {
-                        console.error('Doctor: Media device test failed:', error);
-                        showConnectionStatus('Media device test failed: ' + error.message, 'error');
-                        return false;
-                    });
-
-                return true;
-            }
-
-            // Start polling for signaling messages periodically
-            setInterval(pollSignaling, 1000);
-
-            // Add test button event listener for debugging
-            document.addEventListener('keydown', function(e) {
-                // Press Ctrl+Shift+T to test WebRTC
-                if (e.ctrlKey && e.shiftKey && e.key === 'T') {
-                    testWebRTCConnection();
-                }
-            });
-
-            // --- END OF WEBRTC SECTION --->>>
 
             const translations = {
                 en: { welcome_message: "Welcome, {name}", welcome_subtitle: "Your dashboard is ready.", upcoming_appointments: "Upcoming Appointments", for_today: "For today", completed_today: "Completed Today", consultations: "Consultations", dashboard_nav: "Dashboard", upload_nav: "Upload Rx", earnings_nav: "Earnings", upload_rx_title: "Upload Offline Prescription", select_patient: "Select Patient", upload_image: "Upload Prescription Image", drag_drop: "Click to upload a photo", save_to_record: "Save to Patient Record", earnings_title: "Earnings & History", write_prescription: "Write Prescription", end_call: "End Call", prescription_writer_title: "New Digital Prescription", medicine_name: "Medicine Name", dosage: "Dosage", advice: "Advice", send_prescription: "Sign & Send Prescription", summary_symptoms: "Logged Symptoms", summary_vitals: "Recent Vitals (from ASHA)", summary_prescriptions: "Active Prescriptions", logout: "Logout", appointments_nav: "Appointments", appointments_title: "Today's Appointments", your_reply: "Your Reply", call_patient: "Call", message_patient: "Message", view_summary: "Summary", view_prescription: "View Rx", history_title: "Recent Activity", recent_activity: "Recent Activity", last_4_days: "Last 4 days"},
@@ -2089,7 +1451,27 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
         startCallBtn.disabled = true;
     }
 }
+// Define this function in the main script scope
+function setupWebRTC() {
+    // Attach listeners to call control buttons specific to doctor UI
+    document.getElementById('startCallBtn')?.addEventListener('click', startCall); // Check if exists
+    document.getElementById('endCallBtn')?.addEventListener('click', endCall);     // Check if exists
 
+    // Add listener for the "Join Demo Call" button
+    document.getElementById('joinDemoCallBtn')?.addEventListener('click', () => {
+        // Use the same consistent ID as the patient's demo button
+        showCallScreen('Live Demo Patient', 'demo-call-123');
+    });
+
+    // Start polling for signaling messages (will only run if isCallActive is true)
+    setInterval(pollSignaling, 1000); // Poll every second
+
+    console.log("Doctor: WebRTC event listeners attached.");
+
+    // Note: The main 'call' button listeners on the appointment list
+    // should be handled within your generateAppointments function.
+    // Ensure they correctly call showCallScreen(patientName, appointmentId).
+}
             function generateHistoryList() {
                 const container = document.getElementById('historyList');
                 container.innerHTML = appData.history.map(appt => `
@@ -2348,7 +1730,7 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                 if(isAuthenticated){
                     setupNavigation();
                     setupThemeAndLanguage();
-
+                    setupWebRTC();
                     generateAppointments();
                     generateHistoryList();
                     generateEarningsHistory();
