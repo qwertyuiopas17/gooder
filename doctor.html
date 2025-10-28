@@ -462,6 +462,21 @@
             let retryCount = 0;
             let maxRetries = 3;
             let retryDelay = 1000; // Start with 1 second
+            let mediaRecorder;
+            let audioChunks = [];
+            let isRecording = false;
+            let currentStream = null;
+            const recordIcon = document.getElementById('record-icon');
+            const recordText = document.getElementById('record-text');
+            const recordingStatus = document.getElementById('recording-status');
+            const processingStatus = document.getElementById('processing-status');
+
+            const prescriptionForm = document.getElementById('prescriptionForm');
+            const medicineNameInput = document.getElementById('medicine-name');
+            const medicineDosageInput = document.getElementById('medicine-dosage');
+            const medicineAdviceInput = document.getElementById('medicine-advice');
+            const patientNameSpan = document.getElementById('prescriptionPatientName');
+
 
             // Enhanced WebRTC configuration with multiple STUN/TURN servers
             const configuration = {
@@ -494,46 +509,12 @@
                 bundlePolicy: 'max-bundle',
                 rtcpMuxPolicy: 'require'
             };
-            // --- ADD THIS ENTIRE FUNCTION ---
-        function setupAiPrescription() {
-            const startRecordingBtn = document.getElementById('start-recording-btn');
-            // Check if the button exists before proceeding
-            if (!startRecordingBtn) {
-                console.warn("AI Prescription recording button not found on this page.");
-                return; // Exit if the button isn't part of the current view
-            }
-
-            const recordIcon = document.getElementById('record-icon');
-            const recordText = document.getElementById('record-text');
-            const recordingStatus = document.getElementById('recording-status');
-            const processingStatus = document.getElementById('processing-status');
-
-            const prescriptionForm = document.getElementById('prescriptionForm');
-            const medicineNameInput = document.getElementById('medicine-name');
-            const medicineDosageInput = document.getElementById('medicine-dosage');
-            const medicineAdviceInput = document.getElementById('medicine-advice');
-            const patientNameSpan = document.getElementById('prescriptionPatientName');
-
-            let mediaRecorder;
-            let audioChunks = [];
-            let isRecording = false;
-            let currentStream = null;
-
-            // Check for MediaRecorder support
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-                console.warn('Audio recording or MediaRecorder API not supported.');
-                startRecordingBtn.textContent = 'Recording Not Supported';
-                startRecordingBtn.disabled = true;
-                return;
-            }
-
             const clearPrescriptionForm = () => {
                 medicineNameInput.value = '';
                 medicineDosageInput.value = '';
                 medicineAdviceInput.value = '';
                 // Don't clear patientId or name here, as it's set by navigation context
             };
-
             const resetRecordingUI = (enableButton = true) => {
                 isRecording = false;
                 recordIcon.textContent = '🎤';
@@ -547,6 +528,27 @@
                     currentStream = null;
                 }
             };
+            // --- ADD THIS ENTIRE FUNCTION ---
+        function setupAiPrescription() {
+            const startRecordingBtn = document.getElementById('start-recording-btn');
+            // Check if the button exists before proceeding
+            if (!startRecordingBtn) {
+                console.warn("AI Prescription recording button not found on this page.");
+                return; // Exit if the button isn't part of the current view
+            }
+
+            
+
+            // Check for MediaRecorder support
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+                console.warn('Audio recording or MediaRecorder API not supported.');
+                startRecordingBtn.textContent = 'Recording Not Supported';
+                startRecordingBtn.disabled = true;
+                return;
+            }
+
+
+            
 
             // Call once on script load to set initial state
             resetRecordingUI();
@@ -1748,7 +1750,6 @@ Possible solutions:
 
             // In doctor.html, replace the entire generateAppointments function with this
 
-
 async function generateAppointments() {
     const container = document.getElementById('appointmentsList');
     const pageHeader = document.querySelector('#appointmentsScreen .page-header h1');
@@ -1759,25 +1760,31 @@ async function generateAppointments() {
         pageHeader.dataset.key = 'all_appointments_title';
     }
 
-    // --- Original Loading Logic ---
-    const currentHtml = container.innerHTML;
-    // Show full loading only if the container is empty or has a placeholder message
-    if (!currentHtml || currentHtml.includes('<p')) {
-        container.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading appointments...</p>';
+    // --- Subtle Loading Indication for Polling ---
+    // If the container already has content (not just a placeholder), don't show the full "Loading..." text during polling.
+    // You could add a small spinner or briefly change opacity here if desired, but for simplicity, we'll just fetch.
+    let showFullLoading = !container.innerHTML || container.innerHTML.includes('<p style="text-align: center');
+    if (showFullLoading) {
+         container.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading appointments...</p>';
     }
-    // --- End Original Loading Logic ---
+    // --- End Loading Indication ---
+
 
     let fetchedAppointments = [];
     let fetchError = null;
 
     try {
         const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, { credentials: 'include' });
+        // --- Added basic error check for non-OK HTTP status ---
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
 
         if (data.success && data.appointments) {
             // Sort fetched data immediately for consistent comparison later
             fetchedAppointments = data.appointments.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            console.log("Fetched live appointments:", JSON.stringify(fetchedAppointments));
+            // console.log("Fetched live appointments:", JSON.stringify(fetchedAppointments)); // Keep for debugging if needed
         } else {
             console.warn("API call failed or no appointments returned by backend.");
             // Keep existing appData if fetch fails during polling, otherwise use empty array
@@ -1790,123 +1797,115 @@ async function generateAppointments() {
         fetchedAppointments = (appData.appointments || []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
     }
 
-    // --- Original Re-rendering Check ---
-    // Compare sorted arrays as strings for a reliable check
-    if (JSON.stringify(appData.appointments) !== JSON.stringify(fetchedAppointments)) {
+    // --- Re-rendering Check ---
+    // Compare sorted arrays as strings. Only re-render if data has actually changed.
+    const currentDataString = JSON.stringify(appData.appointments || []); // Use empty array if appData.appointments is null/undefined
+    const fetchedDataString = JSON.stringify(fetchedAppointments);
+
+    if (currentDataString !== fetchedDataString) {
         console.log("Appointment data changed, updating appData and re-rendering.");
         appData.appointments = fetchedAppointments; // Update global appData
 
-        // --- Populate Patient Dropdown (Using updated appData) ---
+        // --- Populate Patient Dropdown (Only when data changes) ---
         const patientSelectDropdown = document.getElementById('patient-select');
         if (patientSelectDropdown) {
-            patientSelectDropdown.innerHTML = ''; // Clear existing options
-            // Corrected check: Check properties on 'appt' object
+             patientSelectDropdown.innerHTML = ''; // Clear existing options
             const validAppointments = appData.appointments.filter(appt => appt && appt.patientId && appt.patient);
-            // Create unique patient list based on patientId
             const uniquePatients = [...new Map(validAppointments.map(item => [item.patientId, item])).values()];
 
             if (uniquePatients.length > 0) {
-                 uniquePatients.sort((a, b) => a.patient.localeCompare(b.patient)).forEach(appt => { // Sort alphabetically
+                 uniquePatients.sort((a, b) => a.patient.localeCompare(b.patient)).forEach(appt => {
                     const option = document.createElement('option');
-                    option.value = appt.patientId; // Use patientId as the value
-                    option.textContent = appt.patient; // Display patient name
+                    option.value = appt.patientId;
+                    option.textContent = appt.patient;
                     patientSelectDropdown.appendChild(option);
                 });
-                // Set initial form dataset value
-                document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
-                // Ensure only one listener is attached
+                if (document.getElementById('uploadRxForm')) { // Check if form exists before setting dataset
+                   document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+                }
                 patientSelectDropdown.removeEventListener('change', updateUploadFormPatientId);
                 patientSelectDropdown.addEventListener('change', updateUploadFormPatientId);
             } else {
-                // Handle case where no valid appointments/patients were fetched
                 const option = document.createElement('option');
                 option.textContent = "No patients found";
                 option.disabled = true;
                 patientSelectDropdown.appendChild(option);
-                document.getElementById('uploadRxForm').removeAttribute('data-patient-id');
+                 if (document.getElementById('uploadRxForm')) { // Check if form exists
+                    document.getElementById('uploadRxForm').removeAttribute('data-patient-id');
+                 }
             }
         }
         // --- End Patient Dropdown Population ---
 
 
-        // --- Render Upcoming/Past Sections ---
+        // --- Render Upcoming/Past Sections (Only when data changes) ---
         const now = new Date();
-        // Filter potentially invalid appointments before rendering
         const validAppointmentsForRender = appData.appointments.filter(appt => appt && appt.dateTime);
 
         const upcoming = validAppointmentsForRender.filter(a => new Date(a.dateTime) >= now);
-                                            // Already sorted ascending by fetch logic
         const past = validAppointmentsForRender.filter(a => new Date(a.dateTime) < now)
-                                        .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime)); // Descending sort for past
+                                        .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
 
         let html = `<h3 class="appointments-section-title" data-key="upcoming_section_title">Upcoming</h3>`;
-        if (upcoming.length === 0) {
-            html += `<p style="text-align: center; padding: 1rem;" data-key="no_upcoming">No upcoming appointments found.</p>`;
+        if (upcoming.length === 0 && past.length === 0 && !fetchError) { // Show message only if truly empty and no error
+             html = `<p style="text-align: center; padding: 2rem;" data-key="no_appointments_found">No appointments found.</p>`;
         } else {
-            html += upcoming.map(appt => {
-                // Use the correct ID key from your backend response (e.g., appt.id)
-                const appointmentKey = appt.id || `appt-${appt.dateTime}`; // Fallback if ID is missing
-                const patientId = appt.patientId || ''; // Ensure patientId exists
-                const patientName = appt.patient || 'Unknown Patient';
-                return `
-                <div class="card appointment-card" data-id="${appointmentKey}" data-patient-id="${patientId}">
-                    <div style="display: flex; align-items: center;">
-                       <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
-                       <div class="appointment-card-details">
-                            <h4>${patientName}</h4>
-                            <p>${new Date(appt.dateTime).toLocaleDateString()} ${appt.time || new Date(appt.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
-                       </div>
-                    </div>
-                    <div class="appointment-actions">
-                         <button class="btn btn-sm btn-call" data-patient="${patientName}" data-patient-id="${patientId}" data-appointment-id="${appointmentKey}" data-key="call_patient">Call</button>
-                         <button class="btn btn-sm btn-message" data-id="${appointmentKey}" data-key="message_patient">Message</button>
-                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey}" data-patient-id="${patientId}" data-patient-name="${patientName}" data-key="view_summary">Summary</button>
-                    </div>
-                </div>`;
-                }).join('');
-        }
+             if (upcoming.length === 0) {
+                 html += `<p style="text-align: center; padding: 1rem;" data-key="no_upcoming">No upcoming appointments found.</p>`;
+             } else {
+                 html += upcoming.map(appt => {
+                     const appointmentKey = appt.id || `appt-${appt.dateTime}`;
+                     const patientId = appt.patientId || '';
+                     const patientName = appt.patient || 'Unknown Patient';
+                     return `
+                     <div class="card appointment-card" data-id="${appointmentKey}" data-patient-id="${patientId}">
+                         {... content like before ...}
+                         <div class="appointment-actions">
+                              <button class="btn btn-sm btn-call" data-patient="${patientName}" data-patient-id="${patientId}" data-appointment-id="${appointmentKey}" data-key="call_patient">Call</button>
+                              <button class="btn btn-sm btn-message" data-id="${appointmentKey}" data-key="message_patient">Message</button>
+                              <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey}" data-patient-id="${patientId}" data-patient-name="${patientName}" data-key="view_summary">Summary</button>
+                         </div>
+                     </div>`;
+                 }).join('');
+             }
 
-        html += `<h3 class="appointments-section-title" style="margin-top: 2rem;" data-key="past_section_title">Past</h3>`;
-        if (past.length === 0) {
-            html += `<p style="text-align: center; padding: 1rem;" data-key="no_past">No past appointments found.</p>`;
-        } else {
-             html += past.map(appt => {
-                const appointmentKey = appt.id || `appt-${appt.dateTime}`;
-                const patientId = appt.patientId || '';
-                const patientName = appt.patient || 'Unknown Patient';
-                return `
-                <div class="card appointment-card" data-id="${appointmentKey}" data-patient-id="${patientId}">
-                    <div style="display: flex; align-items: center;">
-                       <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
-                       <div class="appointment-card-details">
-                            <h4>${patientName}</h4>
-                             <p>${new Date(appt.dateTime).toLocaleDateString()} ${appt.time || new Date(appt.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
-                       </div>
-                    </div>
-                     <div class="appointment-actions">
-                         <button class="btn btn-sm btn-message" data-id="${appointmentKey}" data-key="message_patient">Message</button>
-                         <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey}" data-key="view_prescription">View Rx</button>
-                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey}" data-patient-id="${patientId}" data-patient-name="${patientName}" data-key="view_summary">Summary</button>
-                    </div>
-                </div>`;
-                }).join('');
-        }
+             html += `<h3 class="appointments-section-title" style="margin-top: 2rem;" data-key="past_section_title">Past</h3>`;
+             if (past.length === 0) {
+                 html += `<p style="text-align: center; padding: 1rem;" data-key="no_past">No past appointments found.</p>`;
+             } else {
+                  html += past.map(appt => {
+                     const appointmentKey = appt.id || `appt-${appt.dateTime}`;
+                     const patientId = appt.patientId || '';
+                     const patientName = appt.patient || 'Unknown Patient';
+                     return `
+                     <div class="card appointment-card" data-id="${appointmentKey}" data-patient-id="${patientId}">
+                         {... content like before ...}
+                          <div class="appointment-actions">
+                              <button class="btn btn-sm btn-message" data-id="${appointmentKey}" data-key="message_patient">Message</button>
+                              <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey}" data-key="view_prescription">View Rx</button>
+                              <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey}" data-patient-id="${patientId}" data-patient-name="${patientName}" data-key="view_summary">Summary</button>
+                         </div>
+                     </div>`;
+                 }).join('');
+             }
+        } // End of main else block (if appointments exist)
 
-        container.innerHTML = html; // Set the combined HTML
+        // --- Render the final HTML ---
+        container.innerHTML = html;
 
-        // --- Re-attach event listeners using cloning method from original code ---
+        // --- Re-attach event listeners using cloning method ---
         attachAppointmentButtonListenersCloning(container); // Use cloning helper
 
     } else {
         console.log("Appointment data hasn't changed, skipping re-render.");
-        // If polling fails repeatedly, show error instead of old data
+        // --- Handle Fetch Error Display ---
+        // Show error only if polling failed AND there's no data currently displayed
         if (fetchError && (!appData.appointments || appData.appointments.length === 0)) {
-             container.innerHTML = '<p style="text-align: center; padding: 2rem; color: red;">Could not load appointments.</p>';
+             container.innerHTML = `<p style="text-align: center; padding: 2rem; color: red;">Could not load appointments. ${fetchError.message}</p>`;
         }
-        // Ensure listeners are still attached (cloning might be needed less often here, but safer to include)
-        // attachAppointmentButtonListenersCloning(container);
+        // --- End Fetch Error Display ---
     }
-    // --- End Original Re-rendering Check ---
+    // --- End Re-rendering Check ---
 
     updateUIText(); // Apply translations after rendering or confirming no change
 }
