@@ -166,6 +166,26 @@
         .form-control { width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--color-secondary); color: var(--text-color); }
         .upload-area { border: 2px dashed var(--border-color); border-radius: var(--radius-lg); padding: 2rem; text-align: center; cursor: pointer; }
         .upload-area:hover { border-color: var(--primary-color); }
+
+        /* Add this to your existing <style> block in doctor.html */
+#start-recording-btn {
+    transition: background-color 0.3s ease; /* Smooth transition */
+}
+#start-recording-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+/* Style for when recording is active */
+#start-recording-btn.recording-active,
+#start-recording-btn.recording-active:hover {
+    background-color: #dc3545 !important; /* Red */
+    border-color: #dc3545 !important;
+}
+/* Style for when processing */
+#start-recording-btn:disabled:not(.recording-active) {
+     background-color: #6c757d !important; /* Grey when processing */
+     border-color: #6c757d !important;
+}
         
         /* Bottom Navigation */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; background-color: var(--card-bg-color); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 -4px 20px var(--shadow-color); border-top: 1px solid var(--border-color); padding: 0.5rem 0; z-index: 1000; }
@@ -278,9 +298,9 @@
                         </div>
                         <div class="form-group">
                              <label data-key="upload_image">Upload Prescription Image</label>
-                            <div class="upload-area">
-                                <p data-key="drag_drop">Click to upload a photo</p>
-                            </div>
+                            <label data-key="upload_image">Upload Prescription Image</label>
+                        <input type="file" id="prescriptionFile" class="form-control" accept="image/*" style="padding: 1rem; height: auto;">
+                        <p data-key="drag_drop" style="text-align: center; margin-top: 0.5rem; color: var(--text-color-secondary);">Select an image file to upload.</p>
                         </label>
                         </div>
                         <button type="submit" class="btn btn-primary" style="width:100%" data-key="save_to_record">Save to Patient Record</button>
@@ -293,6 +313,41 @@
                         <div id="earningsList"></div>
                     </div>
                 </section>
+                <section id="prescriptionWriterScreen" class="screen">
+    <div class="page-header"><h1 data-key="prescription_writer_title">New Digital Prescription</h1></div>
+     <form class="card" id="prescriptionForm">
+        <p style="margin-bottom: 1rem;"><strong>Patient:</strong> <span id="prescriptionPatientName">No patient selected</span></p>
+
+        <div class="form-group text-center" style="margin-bottom: 2rem;">
+            <button type="button" class="btn btn-lg" id="start-recording-btn" style="width: 100%; max-width: 300px; margin: auto; padding: 1rem 0; background-color: #28a745; color: white;">
+                <span id="record-icon">🎤</span> <span id="record-text">Record Prescription via Speech</span>
+            </button>
+            <p id="recording-status" style="margin-top: 10px; font-weight: bold; color: #dc3545; display: none;">🔴 Recording... (Click again to stop)</p>
+            <p id="processing-status" style="margin-top: 10px; font-weight: bold; color: var(--primary-color); display: none;">⚙️ Processing with AI, please wait...</p>
+        </div>
+
+        <hr style="margin-top: 1rem; margin-bottom: 2rem; border-top: 1px solid var(--border-color);">
+
+        <h4 style="text-align: center; margin-bottom: 1.5rem; color: var(--text-color-secondary);">AI Generated Output (Review & Edit)</h4>
+
+        <div class="form-group">
+            <label for="medicine-name" data-key="medicine_name">Medicine Name</label>
+            <input type="text" id="medicine-name" class="form-control" placeholder="AI will fill this (e.g., Paracetamol 500mg)">
+        </div>
+
+        <div class="form-group">
+            <label for="medicine-dosage" data-key="dosage">Dosage Instructions</label>
+            <input type="text" id="medicine-dosage" class="form-control" placeholder="AI will fill this (e.g., 1 tablet twice a day after food for 3 days)">
+        </div>
+
+        <div class="form-group">
+            <label for="medicine-advice" data-key="advice">General Advice (Optional)</label>
+            <textarea id="medicine-advice" class="form-control" rows="3" placeholder="AI will fill this if mentioned (e.g., Drink plenty of water.)"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 1rem;" data-key="send_prescription">Sign & Send Prescription</button>
+    </form>
+</section>
 
                 <section id="consultationScreen" class="screen">
     <div class="consultation-view card">
@@ -456,6 +511,227 @@
                 bundlePolicy: 'max-bundle',
                 rtcpMuxPolicy: 'require'
             };
+            // --- ADD THIS ENTIRE FUNCTION ---
+        function setupAiPrescription() {
+            const startRecordingBtn = document.getElementById('start-recording-btn');
+            // Check if the button exists before proceeding
+            if (!startRecordingBtn) {
+                console.warn("AI Prescription recording button not found on this page.");
+                return; // Exit if the button isn't part of the current view
+            }
+
+            const recordIcon = document.getElementById('record-icon');
+            const recordText = document.getElementById('record-text');
+            const recordingStatus = document.getElementById('recording-status');
+            const processingStatus = document.getElementById('processing-status');
+
+            const prescriptionForm = document.getElementById('prescriptionForm');
+            const medicineNameInput = document.getElementById('medicine-name');
+            const medicineDosageInput = document.getElementById('medicine-dosage');
+            const medicineAdviceInput = document.getElementById('medicine-advice');
+            const patientNameSpan = document.getElementById('prescriptionPatientName');
+
+            let mediaRecorder;
+            let audioChunks = [];
+            let isRecording = false;
+            let currentStream = null;
+
+            // Check for MediaRecorder support
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+                console.warn('Audio recording or MediaRecorder API not supported.');
+                startRecordingBtn.textContent = 'Recording Not Supported';
+                startRecordingBtn.disabled = true;
+                return;
+            }
+
+            const clearPrescriptionForm = () => {
+                medicineNameInput.value = '';
+                medicineDosageInput.value = '';
+                medicineAdviceInput.value = '';
+                // Don't clear patientId or name here, as it's set by navigation context
+            };
+
+            const resetRecordingUI = (enableButton = true) => {
+                isRecording = false;
+                recordIcon.textContent = '🎤';
+                recordText.textContent = 'Record Prescription via Speech';
+                startRecordingBtn.style.backgroundColor = '#28a745'; // Reset to green
+                recordingStatus.style.display = 'none';
+                processingStatus.style.display = 'none';
+                startRecordingBtn.disabled = !enableButton;
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
+            };
+
+            // Call once on script load to set initial state
+            resetRecordingUI();
+
+            startRecordingBtn.addEventListener('click', async () => {
+                const currentPatientId = prescriptionForm.dataset.patientId;
+                if (!currentPatientId) {
+                    showConfirmationModal('Patient Not Selected', 'Please view a patient\'s summary or start a call before recording a prescription.');
+                    return;
+                }
+
+                if (!isRecording) {
+                    // --- Start Recording ---
+                    try {
+                        currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                        const options = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                            ? { mimeType: 'audio/webm;codecs=opus' }
+                            : MediaRecorder.isTypeSupported('audio/webm')
+                            ? { mimeType: 'audio/webm' }
+                            : {};
+
+                        mediaRecorder = new MediaRecorder(currentStream, options);
+                        audioChunks = [];
+
+                        mediaRecorder.ondataavailable = event => {
+                            if (event.data.size > 0) audioChunks.push(event.data);
+                        };
+
+                        mediaRecorder.onstop = async () => {
+                            if (audioChunks.length === 0) {
+                                console.warn("No audio data recorded.");
+                                showConfirmationModal('Recording Error', 'No audio was recorded. Microphone might not be capturing input.');
+                                resetRecordingUI();
+                                return;
+                            }
+
+                            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                            // Use a more specific filename if desired
+                            const audioFile = new File([audioBlob], `prescription_${currentPatientId}_${Date.now()}.webm`, { type: mediaRecorder.mimeType || 'audio/webm' });
+
+                            recordingStatus.style.display = 'none';
+                            processingStatus.style.display = 'block';
+                            startRecordingBtn.disabled = true;
+                            recordText.textContent = 'Processing AI...';
+
+                            const formData = new FormData();
+                            formData.append('audio', audioFile);
+                            formData.append('patientId', currentPatientId);
+
+                            try {
+                                console.log(`Sending audio for patient ${currentPatientId}...`);
+                                const response = await fetch(`${API_BASE_URL}/v1/doctor/generate-prescription-from-speech`, {
+                                    method: 'POST',
+                                    body: formData,
+                                    credentials: 'include' // Crucial for authentication
+                                });
+
+                                const data = await response.json();
+                                console.log("Backend AI response:", data);
+
+                                if (response.ok && data.success) {
+                                    const structuredRx = data.structuredPrescription;
+                                    medicineNameInput.value = structuredRx.medicineName || '';
+                                    medicineDosageInput.value = structuredRx.dosage || '';
+                                    medicineAdviceInput.value = structuredRx.advice || '';
+                                    // Optional: Briefly show success before resetting button
+                                    processingStatus.textContent = '✅ Draft Ready!';
+                                    await new Promise(resolve => setTimeout(resolve, 1500)); // Show checkmark briefly
+                                } else {
+                                     // Provide specific feedback based on backend message
+                                     showConfirmationModal('AI Processing Failed', data.message || `Server error: ${response.status}. Please try again or enter manually.`);
+                                }
+                            } catch (error) {
+                                console.error('Error sending audio or processing AI response:', error);
+                                showConfirmationModal('Network Error', `Could not reach AI service: ${error.message}. Please check connection or enter manually.`);
+                            } finally {
+                                // Always reset the UI after processing attempt
+                                resetRecordingUI();
+                            }
+                        };
+
+                        mediaRecorder.start();
+                        isRecording = true;
+
+                        recordIcon.textContent = '■';
+                        recordText.textContent = 'Stop Recording';
+                        startRecordingBtn.style.backgroundColor = '#dc3545'; // Red color
+                        recordingStatus.style.display = 'block';
+                        processingStatus.style.display = 'none';
+                        clearPrescriptionForm(); // Clear fields for new recording
+
+                    } catch (err) {
+                        console.error('Error accessing microphone/starting recorder:', err);
+                        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                            showConfirmationModal('Permission Denied', 'Microphone access is required. Please allow permission in browser settings.');
+                        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                             showConfirmationModal('No Microphone', 'No microphone found on your device.');
+                        } else {
+                             showConfirmationModal('Microphone Error', 'Could not start recording. Ensure microphone is working and allowed.');
+                        }
+                        resetRecordingUI(false); // Keep button disabled if mic failed critically
+                    }
+                } else {
+                    // --- Stop Recording ---
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                         mediaRecorder.stop(); // This triggers the 'onstop' event
+                    }
+                     // UI reset happens within the 'onstop' handler after processing
+                }
+            });
+
+            // Set up listener for the form submission (digital prescription save)
+            // This listener should already exist in your setupFormsAndModals,
+            // ensure it correctly reads the patientId from prescriptionForm.dataset.patientId
+            // and sends the content of the input fields.
+             prescriptionForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const patientId = e.target.dataset.patientId; // Get patient context
+                if (!patientId) {
+                    showConfirmationModal('Error', 'No patient context. Please select a patient first.');
+                    return;
+                }
+                const medicineName = medicineNameInput.value.trim();
+                const dosage = medicineDosageInput.value.trim();
+                const advice = medicineAdviceInput.value.trim();
+
+                if (!medicineName || !dosage) {
+                    showConfirmationModal('Missing Info', 'Please ensure Medicine Name and Dosage Instructions are filled (either by AI or manually).');
+                    return;
+                }
+
+                // Show loading/saving state
+                const submitButton = prescriptionForm.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.textContent;
+                submitButton.textContent = 'Sending...';
+                submitButton.disabled = true;
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/v1/doctor/create-digital-prescription`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Credentials': 'include' },
+                        body: JSON.stringify({
+                            patientId,
+                            medicineName,
+                            dosage,
+                            advice
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showConfirmationModal('Prescription Sent', 'The digital prescription has been saved and sent to the patient.');
+                        // Optionally clear form and navigate away
+                        clearPrescriptionForm();
+                        resetRecordingUI(); // Reset mic button too
+                        showScreen('dashboardScreen');
+                    } else {
+                        throw new Error(data.message || 'Failed to save digital prescription.');
+                    }
+                } catch (error) {
+                    showConfirmationModal('Save Failed', `Error saving prescription: ${error.message}`);
+                } finally {
+                    submitButton.textContent = originalButtonText;
+                    submitButton.disabled = false;
+                }
+             });
+        }
+        // --- END OF setupAiPrescription FUNCTION ---
 
             function showCallScreen(patientName, appointmentId) {
                 currentAppointmentId = appointmentId;
@@ -941,6 +1217,98 @@
                     }
                 }
             }
+            // In doctor.html, inside the <script> block
+
+        async function showPatientSummary(appointmentId) {
+            console.log("Showing summary for appointment ID:", appointmentId);
+            // 1. Find the appointment details (including patientId)
+            const apptData = appData.appointments.find(a => String(a.id) === String(appointmentId));
+
+            if (!apptData || !apptData.patientId) {
+                console.error("Could not find appointment data or patientId for ID:", appointmentId);
+                // Try fallback using mock summary data if needed (remove in production if mock data is gone)
+                const summaryData = appData.summaries ? appData.summaries[appointmentId] : null;
+                if (summaryData && summaryData.patientId) {
+                    apptData.patientId = summaryData.patientId;
+                    apptData.patient = summaryData.patient; // Use mock patient name if needed
+                } else {
+                     showConfirmationModal("Error", "Could not load patient context for this appointment.");
+                     return; // Stop if no patientId found
+                }
+            }
+
+            const patientId = apptData.patientId;
+            const patientName = apptData.patient || "Unknown Patient";
+
+            // Update global context and form dataset immediately
+            currentAppointment = { ...apptData }; // Store current context globally
+            const prescriptionForm = document.getElementById('prescriptionForm');
+            prescriptionForm.dataset.patientId = patientId;
+            document.getElementById('prescriptionPatientName').textContent = patientName;
+            // Clear form and reset mic button when summary is shown
+             clearPrescriptionForm(); // Assumes this function exists from setupAiPrescription
+             resetRecordingUI();    // Assumes this function exists from setupAiPrescription
+
+            // 2. Prepare the Modal UI (Show loading state)
+            const modal = document.getElementById('aiSummaryModal');
+            const titleEl = document.getElementById('summaryModalTitle');
+            const symptomsList = document.getElementById('summarySymptoms');
+            const vitalsList = document.getElementById('summaryVitals');
+            const prescriptionsList = document.getElementById('summaryPrescriptions');
+            const startCallBtn = document.getElementById('startCallFromSummary'); // Get button
+
+            titleEl.textContent = `Loading Summary: ${patientName}...`;
+            symptomsList.innerHTML = '<li>Loading...</li>';
+            vitalsList.innerHTML = '<li>Loading...</li>';
+            prescriptionsList.innerHTML = '<li>Loading...</li>';
+            startCallBtn.disabled = true; // Disable call button while loading
+
+            modal.classList.add('active'); // Show modal with loading state
+
+            // 3. Fetch live summary data from the backend
+            try {
+                // --- THIS IS THE NEW BACKEND CALL ---
+                const response = await fetch(`${API_BASE_URL}/v1/patient-summary/${patientId}`, {
+                    method: 'GET',
+                    credentials: 'include' // Important for authentication
+                });
+                // --- END OF NEW BACKEND CALL ---
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: `Server error: ${response.status}` }));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                const summaryData = await response.json();
+
+                if (summaryData.success) {
+                    // 4. Populate Modal with Fetched Data
+                    titleEl.textContent = `AI Pre-Read: ${patientName}`; // Use fetched name? or keep from apptData?
+                    // Use optional chaining and provide defaults
+                    symptomsList.innerHTML = summaryData.symptoms?.length
+                        ? summaryData.symptoms.map(s => `<li>${s}</li>`).join('')
+                        : '<li>No recent symptoms logged.</li>';
+                    vitalsList.innerHTML = summaryData.vitals?.length
+                        ? summaryData.vitals.map(v => `<li>${v}</li>`).join('')
+                        : '<li>No recent vitals available.</li>';
+                    prescriptionsList.innerHTML = summaryData.prescriptions?.length
+                        ? summaryData.prescriptions.map(p => `<li>${p}</li>`).join('')
+                        : '<li>No active prescriptions found.</li>';
+                    startCallBtn.disabled = false; // Re-enable call button
+                } else {
+                    throw new Error(summaryData.message || 'Backend failed to retrieve summary.');
+                }
+
+            } catch (error) {
+                console.error('Error fetching patient summary:', error);
+                titleEl.textContent = `Error Loading Summary: ${patientName}`;
+                symptomsList.innerHTML = `<li>Error: ${error.message}</li>`;
+                vitalsList.innerHTML = '<li>Could not load vitals.</li>';
+                prescriptionsList.innerHTML = '<li>Could not load prescriptions.</li>';
+                startCallBtn.disabled = true; // Keep disabled on error
+                // Optionally add a retry button here
+            }
+        }
 
             async function answerCall() {
                 try {
@@ -1375,7 +1743,6 @@ async function generateAppointments() {
     const container = document.getElementById('appointmentsList');
 
     try {
-        // --- NEW ---
         // Fetch live appointment data from the new backend endpoint
         const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, {
             credentials: 'include' // Important: sends the session cookie for authentication
@@ -1386,35 +1753,102 @@ async function generateAppointments() {
         if (data.success && data.appointments) {
             console.log("Fetched live appointments:", data.appointments);
             // Overwrite the mock data with the real data
-            appData.appointments = data.appointments;
+            appData.appointments = data.appointments; // <-- Live data is assigned here
+
+            // --- ADD THIS CODE BLOCK HERE ---
+            const patientSelectDropdown = document.getElementById('patient-select');
+            if (patientSelectDropdown) {
+                // Clear existing mock options
+                patientSelectDropdown.innerHTML = '';
+                // Add options for each unique patient from upcoming appointments
+                // Filter out potential null/undefined patients first
+                const validAppointments = appData.appointments.filter(appt => appt && appt.patientId && appt.patient);
+                const uniquePatients = [...new Map(validAppointments.map(item => [item.patientId, item])).values()];
+
+                if (uniquePatients.length > 0) {
+                    uniquePatients.forEach(appt => {
+                        const option = document.createElement('option');
+                        option.value = appt.patientId; // Use patientId as the value
+                        option.textContent = appt.patient; // Display patient name
+                        patientSelectDropdown.appendChild(option);
+                    });
+                    // If there are patients, set the dataset of the form based on the first selected option
+                     document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+                     // Update dataset when selection changes
+                     patientSelectDropdown.addEventListener('change', (e) => {
+                          document.getElementById('uploadRxForm').dataset.patientId = e.target.value;
+                     });
+                 } else {
+                     // Handle case where no valid appointments/patients were fetched
+                     const option = document.createElement('option');
+                     option.textContent = "No patients found";
+                     option.disabled = true;
+                     patientSelectDropdown.appendChild(option);
+                     // Clear any potentially stale patientId from the form
+                     document.getElementById('uploadRxForm').removeAttribute('data-patient-id');
+                 }
+            }
+            // --- END OF ADDED CODE BLOCK ---
+
         } else {
             console.warn("API call for appointments failed or returned no data. Using mock data.");
+            // --- ADDITION: Populate dropdown with mock data if API fails ---
+            const patientSelectDropdown = document.getElementById('patient-select');
+            if (patientSelectDropdown) {
+                 patientSelectDropdown.innerHTML = `
+                    <option value="PAT001">Ramesh Kumar</option>
+                    <option value="PAT002">Sunita Devi</option>
+                    <option value="PAT003">Geeta Singh</option>
+                 `;
+                 // Set initial dataset based on mock data
+                 document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+                 patientSelectDropdown.addEventListener('change', (e) => {
+                      document.getElementById('uploadRxForm').dataset.patientId = e.target.value;
+                 });
+            }
+            // --- END OF ADDITION ---
         }
-        // --- END NEW ---
     } catch (error) {
         console.error("Error fetching appointments, falling back to mock data:", error);
+        // --- ADDITION: Populate dropdown with mock data on error ---
+        const patientSelectDropdown = document.getElementById('patient-select');
+        if (patientSelectDropdown) {
+             patientSelectDropdown.innerHTML = `
+                <option value="PAT001">Ramesh Kumar</option>
+                <option value="PAT002">Sunita Devi</option>
+                <option value="PAT003">Geeta Singh</option>
+             `;
+             // Set initial dataset based on mock data
+             document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+             patientSelectDropdown.addEventListener('change', (e) => {
+                  document.getElementById('uploadRxForm').dataset.patientId = e.target.value;
+             });
+        }
+        // --- END OF ADDITION ---
     }
-    
+
     // This rendering code now uses either the live data or the fallback mock data
     const now = new Date();
-    const upcomingAppointments = appData.appointments.filter(appt => new Date(appt.dateTime) >= now);
+    // Filter potentially invalid appointments before rendering
+    const validAppointmentsForRender = appData.appointments.filter(appt => appt && appt.dateTime);
+    const upcomingAppointments = validAppointmentsForRender.filter(appt => new Date(appt.dateTime) >= now);
 
     if (upcomingAppointments.length === 0) {
         container.innerHTML = `<p style="text-align: center; padding: 2rem;">You have no upcoming appointments today.</p>`;
-        return;
+        return; // Return here as well
     }
-    
+
     container.innerHTML = upcomingAppointments.map(appt => `
         <div class="card appointment-card" data-id="${appt.id}">
             <div style="display: flex; align-items: center;">
-               <div class="appointment-type-indicator type-${appt.type}"></div>
+               <div class="appointment-type-indicator type-${appt.type || 'video'}"></div> {/* Default type */}
                <div class="appointment-card-details">
-                    <h4>${appt.patient}</h4>
-                    <p>${appt.time} &middot; ${appt.type.charAt(0).toUpperCase() + appt.type.slice(1)} Call</p>
+                    <h4>${appt.patient || 'Unknown Patient'}</h4>
+                    <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p> {/* Default type */}
                </div>
             </div>
             <div class="appointment-actions">
-                 <button class="btn btn-sm btn-call" data-patient="${appt.patient}" data-key="call_patient">Call</button>
+                 <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-key="call_patient">Call</button>
                  <button class="btn btn-sm btn-message" data-id="${appt.id}" data-key="message_patient">Message</button>
                  <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appt.id}" data-key="view_prescription">View Rx</button>
                  <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appt.id}" data-key="view_summary">Summary</button>
@@ -1525,12 +1959,37 @@ async function generateAppointments() {
             function setupFormsAndModals() {
                 document.getElementById('closeSummaryModal').addEventListener('click', () => document.getElementById('aiSummaryModal').classList.remove('active'));
                 // --- MODIFIED LINE ---
-                document.getElementById('startCallFromSummary').addEventListener('click', () => {
-                    if (currentAppointment) {
-                         // We need both patient name and appointment ID
-                        showCallScreen(currentAppointment.patient, currentAppointment.id);
-                    }
-                });
+                // When starting call from summary
+            document.getElementById('startCallFromSummary').addEventListener('click', () => {
+                // The patient context should ALREADY be set by showPatientSummary
+                if (currentAppointment && currentAppointment.patientId && currentAppointment.patient) {
+                     // Patient context IS set on the form by showPatientSummary
+                     // Just need to show the call screen
+                     showCallScreen(currentAppointment.patient, currentAppointment.id);
+                } else {
+                    showConfirmationModal('Error', 'Patient context is missing. Cannot start call.');
+                }
+            });
+
+            // Handle direct navigation to prescription screen (e.g., from consultation view)
+            // Find the button inside the consultation view that navigates
+            const writePrescriptionBtn = document.querySelector('#consultationScreen [data-screen="prescriptionWriterScreen"]');
+            if (writePrescriptionBtn) {
+                 writePrescriptionBtn.addEventListener('click', (e) => {
+                     // Prevent default navigation if context is missing
+                     if (!currentAppointment || !currentAppointment.patientId) {
+                          e.preventDefault();
+                          e.stopPropagation(); // Stop further event bubbling
+                          showConfirmationModal('Patient Context Missing', 'Cannot write prescription without selecting a patient from appointments or summary.');
+                     } else {
+                          // Context is presumably set from the call screen initiation
+                          // Ensure form is clear and button reset before showing screen
+                          clearPrescriptionForm(); // Defined in setupAiPrescription
+                          resetRecordingUI();    // Defined in setupAiPrescription
+                          // Let the default navigation happen (showScreen will be called by data-screen attribute)
+                     }
+                 });
+            }
                 
                 document.getElementById('closeMessageModal').addEventListener('click', () => document.getElementById('messageModal').classList.remove('active'));
                 document.getElementById('closeRxModal').addEventListener('click', () => document.getElementById('prescriptionViewModal').classList.remove('active'));
@@ -1557,11 +2016,88 @@ async function generateAppointments() {
                 
                 document.getElementById('closeModal').addEventListener('click', () => document.getElementById('confirmationModal').classList.remove('active'));
 
-                document.getElementById('uploadRxForm').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    showConfirmationModal('Upload Successful', 'The prescription has been saved to the patient\'s record.');
-                    showScreen('dashboardScreen');
-                });
+                document.getElementById('uploadRxForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // --- Get patientId (Ensure context is set, e.g., from summary/call) ---
+                const patientId = e.target.dataset.patientId;
+                // --- Fallback using dropdown (if dataset isn't reliably set) ---
+                const selectedPatientName = document.getElementById('patient-select').value; // Get selected name from dropdown
+                const patientFromDropdown = appData.appointments.find(appt => appt.patient === selectedPatientName);
+                const finalPatientId = patientId || patientFromDropdown?.patientId; // Prioritize dataset, fallback to dropdown lookup
+
+                if (!finalPatientId) {
+                     showConfirmationModal('Error', 'No patient selected. Please view patient summary/start call or select from dropdown.');
+                     return;
+                }
+                console.log("Uploading prescription for patient ID:", finalPatientId);
+
+
+                const fileInput = document.getElementById('prescriptionFile');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    showConfirmationModal('No File Selected', 'Please select an image file to upload.');
+                    return;
+                }
+
+                // Show processing state
+                const submitButton = e.target.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.textContent;
+                submitButton.textContent = 'Uploading & Analyzing...';
+                submitButton.disabled = true;
+
+                // Read file as Base64 Data URL
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                reader.onload = async () => {
+                    const imageDataUrl = reader.result; // This is the base64 string with prefix
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/v1/doctor/upload-prescription`, { // Correct endpoint
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Credentials': 'include' // Important for auth
+                            },
+                            body: JSON.stringify({
+                                patientId: finalPatientId, // Send the determined patient ID
+                                imageData: imageDataUrl // Send the full Data URL
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            showConfirmationModal('Upload Successful', data.message || 'Prescription saved to patient record.');
+                            // Optionally, show extracted info if needed: console.log("Extracted:", data.extractedData);
+                            // Clear the file input
+                            fileInput.value = null;
+                            // Navigate back or reset view
+                            showScreen('dashboardScreen');
+                        } else {
+                            throw new Error(data.message || data.error || `Server error: ${response.status}`);
+                        }
+                    } catch (error) {
+                        console.error('Doctor prescription upload error:', error);
+                        showConfirmationModal('Upload Failed', `Error: ${error.message}. Please try again.`);
+                    } finally {
+                        // Reset button state
+                        submitButton.textContent = originalButtonText;
+                        submitButton.disabled = false;
+                    }
+                };
+
+                reader.onerror = () => {
+                    console.error('Failed to read file.');
+                    showConfirmationModal('File Error', 'Could not read the selected image file.');
+                    // Reset button state
+                    submitButton.textContent = originalButtonText;
+                    submitButton.disabled = false;
+                };
+            });
+                
                  document.getElementById('prescriptionForm').addEventListener('submit', (e) => {
                     e.preventDefault();
                     showConfirmationModal('Prescription Sent', 'The digital prescription has been sent to the patient and their pharmacy.');
@@ -1585,10 +2121,12 @@ async function generateAppointments() {
                 if(isAuthenticated){
                     setupNavigation();
                     setupThemeAndLanguage();
+
                     generateAppointments();
                     generateHistoryList();
                     generateEarningsHistory();
                     setupFormsAndModals();
+                    setupAiPrescription();
                     // --- ADD THIS EVENT LISTENER ---
                     document.getElementById('joinDemoCallBtn').addEventListener('click', () => {
                         // Use the exact same ID as the patient's demo button
