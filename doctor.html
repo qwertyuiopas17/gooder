@@ -691,7 +691,8 @@
                 try {
                     const response = await fetch(`${API_BASE_URL}/doctor/create-digital-prescription`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Credentials': 'include' },
+                        headers: { 'Content-Type': 'application/json'},
+                        credentials: 'include',
                         body: JSON.stringify({
                             patientId,
                             medicineName,
@@ -699,6 +700,16 @@
                             advice
                         })
                     });
+                    // Check if the response was actually received and OK
+                     if (!response.ok) {
+                         // Try to get error message from backend if possible
+                         let errorMsg = `Server error: ${response.status}`;
+                         try {
+                              const errorData = await response.json();
+                              errorMsg = errorData.message || errorMsg;
+                         } catch(jsonError) { /* Ignore if response not JSON */ }
+                         throw new Error(errorMsg); // Throw error to be caught below
+                     }
                     const data = await response.json();
                     if (data.success) {
                         showConfirmationModal('Prescription Sent', 'The digital prescription has been saved and sent to the patient.');
