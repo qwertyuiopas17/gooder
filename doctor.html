@@ -1860,7 +1860,7 @@ async function generateAppointments() {
                      const patientName = appt.patient || 'Unknown Patient';
                      return `
                      <div class="card appointment-card" data-id="${appointmentKey}" data-patient-id="${patientId}">
-                         {... content like before ...}
+                        
                          <div class="appointment-actions">
                               <button class="btn btn-sm btn-call" data-patient="${patientName}" data-patient-id="${patientId}" data-appointment-id="${appointmentKey}" data-key="call_patient">Call</button>
                               <button class="btn btn-sm btn-message" data-id="${appointmentKey}" data-key="message_patient">Message</button>
