@@ -1750,141 +1750,194 @@ Possible solutions:
 
 async function generateAppointments() {
     const container = document.getElementById('appointmentsList');
-    // Store the currently displayed HTML content to prevent flickering during loading if fetch is fast
-    const currentHtml = container.innerHTML;
-    // Show a subtle loading indicator without clearing everything immediately if polling
-    // (You might add a small loading spinner element instead)
-    if (!currentHtml || currentHtml.includes('<p')) { // Only show full loading if empty or showing placeholder
-         container.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading appointments...</p>';
+    // --- Optional: Update Page Header Title ---
+    const pageHeader = document.querySelector('#appointmentsScreen .page-header h1');
+    if (pageHeader) {
+        pageHeader.textContent = 'My Appointments'; // Change title from "Today's Appointments"
+        pageHeader.dataset.key = 'all_appointments_title'; // Update data-key if using translations
     }
-
-    let fetchedAppointments = [];
+    // --- End Optional Update ---
 
     try {
-        const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, { credentials: 'include' });
+        // Fetch live appointment data (backend now sends ALL appointments)
+        const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, {
+            credentials: 'include'
+        });
         const data = await response.json();
 
+        let appointmentsToRender = [];
         if (data.success && data.appointments) {
-            console.log("Fetched live appointments:", JSON.stringify(data.appointments));
-            fetchedAppointments = data.appointments;
-        } else {
-            console.warn("API call failed or no appointments. Using previous/mock data.");
-            // Keep existing appData if fetch fails during polling
-            fetchedAppointments = appData.appointments || []; // Use existing or empty array
-        }
-    } catch (error) {
-        console.error("Error fetching appointments:", error);
-        // Keep existing appData on error during polling
-        fetchedAppointments = appData.appointments || []; // Use existing or empty array
-        // Show error only if it's the initial load (no previous data)
-        if (!appData.appointments || appData.appointments.length === 0) {
-             container.innerHTML = '<p style="text-align: center; padding: 2rem; color: red;">Could not load appointments.</p>';
-        }
-    }
+            console.log("Fetched all appointments:", data.appointments);
+            appointmentsToRender = data.appointments; // Use live data
+            // --- Populate patient dropdown (no changes needed here from previous fix) ---
+            const patientSelectDropdown = document.getElementById('patient-select');
+            if (patientSelectDropdown) {
+                patientSelectDropdown.innerHTML = ''; // Clear existing options
+                const validAppointments = appointmentsToRender.filter(appt => appt && appt.patientId && appt.patient);
+                const uniquePatients = [...new Map(validAppointments.map(item => [item.patientId, item])).values()];
 
-    // --- Update appData AFTER fetch/fallback ---
-    // Check if the fetched data is substantially different before re-rendering (optional optimization)
-    if (JSON.stringify(appData.appointments) !== JSON.stringify(fetchedAppointments)) {
-        console.log("Appointment data changed, updating appData and re-rendering.");
-        appData.appointments = fetchedAppointments;
-
-        // --- Populate dropdown ---
-        const patientSelectDropdown = document.getElementById('patient-select');
-        if (patientSelectDropdown) {
-             // ... (Dropdown population logic remains the same as your latest version) ...
-             patientSelectDropdown.innerHTML = '';
-             const validAppointments = appData.appointments.filter(appt => appt && appData.patientId && appData.patient); // Check correct properties
-             const uniquePatients = [...new Map(validAppointments.map(item => [item.patientId, item])).values()];
-             // ... (rest of dropdown logic) ...
-             if (uniquePatients.length > 0) {
-                 uniquePatients.forEach(appt => { /* ... create option ... */ });
-                 document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
-                 patientSelectDropdown.removeEventListener('change', updateUploadFormPatientId);
-                 patientSelectDropdown.addEventListener('change', updateUploadFormPatientId);
-             } else { /* ... handle no patients ... */ }
-        }
-
-
-        // --- Render list HTML ---
-        const now = new Date();
-        const validAppointmentsForRender = appData.appointments.filter(appt => appt && appt.dateTime);
-        const upcomingAppointments = validAppointmentsForRender.filter(appt => new Date(appt.dateTime) >= now);
-
-        if (upcomingAppointments.length === 0) {
-            container.innerHTML = `<p style="text-align: center; padding: 2rem;">You have no upcoming appointments today.</p>`;
-        } else {
-            // Build the HTML
-            container.innerHTML = upcomingAppointments.map(appt => {
-                const appointmentKey = appt.id || appt.appointmentId || appt.appointment_id; // Use correct ID key
-                return `
-                <div class="card appointment-card" data-id="${appointmentKey || ''}">
-                    
-                     <h4>${appt.patient || 'Unknown Patient'}</h4>
-                     <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
-                    
-                    <div class="appointment-actions">
-                         
-                         <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-patient-id="${appt.patientId || ''}" data-appointment-id="${appointmentKey || ''}" data-key="call_patient">Call</button>
-                         <button class="btn btn-sm btn-message" data-id="${appointmentKey || ''}" data-key="message_patient">Message</button> 
-                         <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey || ''}" data-key="view_prescription">View Rx</button>
-                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey || ''}" data-patient-id="${appt.patientId || ''}" data-patient-name="${appt.patient || 'Unknown Patient'}" data-key="view_summary">Summary</button> 
-                    </div>
-                </div>`;
-            }).join('');
-
-            // --- Attach Event Listeners AFTER rendering ---
-            container.querySelectorAll('.view-summary-btn').forEach(btn => {
-                const apptId = btn.dataset.id;
-                const patId = btn.dataset.patientId; // Get patientId directly
-                const patName = btn.dataset.patientName; // Get patientName directly
-                if (apptId && patId) {
-                    // Remove previous listener before adding new one
-                    btn.replaceWith(btn.cloneNode(true));
-                    container.querySelector(`.view-summary-btn[data-id="${apptId}"]`)
-                             // Pass data directly to the handler
-                             .addEventListener('click', () => showPatientSummary(apptId, patId, patName));
+                if (uniquePatients.length > 0) {
+                     uniquePatients.sort((a, b) => a.patient.localeCompare(b.patient)).forEach(appt => { // Sort alphabetically
+                        const option = document.createElement('option');
+                        option.value = appt.patientId;
+                        option.textContent = appt.patient;
+                        patientSelectDropdown.appendChild(option);
+                    });
+                    document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+                    patientSelectDropdown.removeEventListener('change', updateUploadFormPatientId); // Remove previous listener if exists
+                    patientSelectDropdown.addEventListener('change', updateUploadFormPatientId);
                 } else {
-                    console.error("Summary button missing required data attributes (data-id, data-patient-id):", btn);
+                    const option = document.createElement('option');
+                    option.textContent = "No patients found";
+                    option.disabled = true;
+                    patientSelectDropdown.appendChild(option);
+                    document.getElementById('uploadRxForm').removeAttribute('data-patient-id');
                 }
-            });
+            }
+            // --- End patient dropdown population ---
+        } else {
+            console.warn("API call for appointments failed or returned no data. Using mock data.");
+            appointmentsToRender = appData.appointments; // Fallback to mock data
+             // --- Populate dropdown with mock data if API fails (no changes needed) ---
+            const patientSelectDropdown = document.getElementById('patient-select');
+            if (patientSelectDropdown) {
+                 patientSelectDropdown.innerHTML = `
+                    <option value="PAT001">Ramesh Kumar</option>
+                    <option value="PAT002">Sunita Devi</option>
+                    <option value="PAT003">Geeta Singh</option>
+                 `;
+                 document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+                 patientSelectDropdown.removeEventListener('change', updateUploadFormPatientId); // Remove previous listener if exists
+                 patientSelectDropdown.addEventListener('change', updateUploadFormPatientId);
+            }
+             // --- End mock dropdown population ---
+        }
 
-            // Update other listeners similarly if needed, passing necessary data directly
-            container.querySelectorAll('.btn-call').forEach(btn => {
-                const apptId = btn.dataset.appointmentId;
-                const patId = btn.dataset.patientId;
-                const patName = btn.dataset.patient;
-                 if (apptId && patId) {
-                     btn.replaceWith(btn.cloneNode(true));
-                     container.querySelector(`.btn-call[data-appointment-id="${apptId}"]`)
-                              .addEventListener('click', () => {
-                                  // Set context for prescription forms before showing call screen
-                                  currentAppointment = { id: apptId, patientId: patId, patient: patName }; // Update global context
-                                  const prescriptionForm = document.getElementById('prescriptionForm');
-                                  const uploadRxForm = document.getElementById('uploadRxForm');
-                                  if(prescriptionForm) {
-                                      prescriptionForm.dataset.patientId = patId;
-                                      const nameSpan = document.getElementById('prescriptionPatientName');
-                                      if(nameSpan) nameSpan.textContent = patName;
-                                  }
-                                  if(uploadRxForm) {
-                                      uploadRxForm.dataset.patientId = patId;
-                                      const patientSelect = document.getElementById('patient-select');
-                                      if(patientSelect) patientSelect.value = patId;
-                                  }
-                                  showCallScreen(patName, apptId);
-                              });
-                 }
-            });
-             // (Add listener re-attachment for view-rx-btn and btn-message)
+        // --- NEW: Filter into Upcoming and Past ---
+        const now = new Date();
+        const upcoming = appointmentsToRender.filter(a => a && a.dateTime && new Date(a.dateTime) >= now)
+                                            .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)); // Ascending sort
+        const past = appointmentsToRender.filter(a => a && a.dateTime && new Date(a.dateTime) < now)
+                                        .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime)); // Descending sort
+        // --- END NEW FILTERING ---
 
-        } // End if upcomingAppointments
-    } // End if data changed
-     else {
-         console.log("Appointment data hasn't changed, skipping re-render.");
-         // Ensure listeners are still attached if needed, or rely on them persisting
+        // --- NEW: Render Upcoming Section ---
+        let html = `<h3 class="appointments-section-title" data-key="upcoming_section_title">Upcoming</h3>`; // Add section title style if needed
+        if (upcoming.length === 0) {
+            html += `<p style="text-align: center; padding: 1rem;" data-key="no_upcoming">No upcoming appointments found.</p>`;
+        } else {
+            html += upcoming.map(appt => `
+                <div class="card appointment-card" data-id="${appt.id}" data-patient-id="${appt.patientId || ''}">
+                    <div style="display: flex; align-items: center;">
+                       <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
+                       <div class="appointment-card-details">
+                            <h4>${appt.patient || 'Unknown Patient'}</h4>
+                            <p>${new Date(appt.dateTime).toLocaleDateString()} ${appt.time || new Date(appt.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
+                       </div>
+                    </div>
+                    <div class="appointment-actions">
+                         <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-key="call_patient">Call</button>
+                         <button class="btn btn-sm btn-message" data-id="${appt.id}" data-key="message_patient">Message</button>
+                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appt.id}" data-key="view_summary">Summary</button>
+                    </div>
+                </div>`).join('');
+        }
+        // --- END NEW UPCOMING ---
+
+        // --- NEW: Render Past Section ---
+        html += `<h3 class="appointments-section-title" style="margin-top: 2rem;" data-key="past_section_title">Past</h3>`; // Add section title style
+        if (past.length === 0) {
+            html += `<p style="text-align: center; padding: 1rem;" data-key="no_past">No past appointments found.</p>`;
+        } else {
+             html += past.map(appt => `
+                <div class="card appointment-card" data-id="${appt.id}" data-patient-id="${appt.patientId || ''}">
+                    <div style="display: flex; align-items: center;">
+                       <div class="appointment-type-indicator type-${appt.type || 'video'}"></div>
+                       <div class="appointment-card-details">
+                            <h4>${appt.patient || 'Unknown Patient'}</h4>
+                             <p>${new Date(appt.dateTime).toLocaleDateString()} ${appt.time || new Date(appt.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
+                       </div>
+                    </div>
+                     <div class="appointment-actions">
+                         <button class="btn btn-sm btn-message" data-id="${appt.id}" data-key="message_patient">Message</button>
+                         <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appt.id}" data-key="view_prescription">View Rx</button>
+                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appt.id}" data-key="view_summary">Summary</button>
+                    </div>
+                </div>`).join('');
+        }
+        // --- END NEW PAST ---
+
+        container.innerHTML = html; // Set the combined HTML
+
+        // --- Re-attach event listeners (important!) ---
+        attachAppointmentButtonListeners(); // Call a helper function to keep it clean
+
+    } catch (error) {
+        console.error("Error fetching or rendering appointments:", error);
+        container.innerHTML = `<p style="text-align: center; padding: 2rem; color: var(--sos-color);">Could not load appointments. Please try again later.</p>`;
+        // Optionally populate dropdown with mock data even on error
+         const patientSelectDropdown = document.getElementById('patient-select');
+        if (patientSelectDropdown) {
+             patientSelectDropdown.innerHTML = `
+                <option value="PAT001">Ramesh Kumar</option>
+                <option value="PAT002">Sunita Devi</option>
+                <option value="PAT003">Geeta Singh</option>
+             `;
+             document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+             patientSelectDropdown.removeEventListener('change', updateUploadFormPatientId); // Remove previous listener if exists
+             patientSelectDropdown.addEventListener('change', updateUploadFormPatientId);
+        }
     }
+    updateUIText(); // Apply translations after rendering
+}
 
-    updateUIText();
+// --- NEW HELPER FUNCTION to attach listeners ---
+function attachAppointmentButtonListeners() {
+    document.querySelectorAll('#appointmentsList .view-summary-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+             // Get patientId directly from the card's dataset attribute
+            const patientId = btn.closest('.appointment-card')?.dataset.patientId;
+            if (patientId) {
+                showPatientSummary(patientId); // Pass patientId instead of appointmentId
+            } else {
+                console.error("Could not find patientId for summary button on appointment:", btn.dataset.id);
+                showConfirmationModal("Error", "Could not load patient context for this appointment.");
+            }
+        });
+    });
+    document.querySelectorAll('#appointmentsList .view-rx-btn').forEach(btn => {
+        btn.addEventListener('click', () => showPrescriptionModal(btn.dataset.id));
+    });
+    document.querySelectorAll('#appointmentsList .btn-call').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const appointmentCard = e.currentTarget.closest('.appointment-card');
+            const appointmentId = appointmentCard?.dataset.id;
+            const patientName = e.currentTarget.dataset.patient;
+            if (appointmentId && patientName) {
+                 // --- Set currentAppointment context before showing call screen ---
+                currentAppointment = {
+                    id: appointmentId,
+                    patient: patientName,
+                    patientId: appointmentCard?.dataset.patientId || null // Get patientId from card
+                    // Add other relevant details if needed later
+                };
+                // Ensure form context is set for prescription writing during call
+                const prescriptionForm = document.getElementById('prescriptionForm');
+                prescriptionForm.dataset.patientId = currentAppointment.patientId;
+                document.getElementById('prescriptionPatientName').textContent = currentAppointment.patient;
+                clearPrescriptionForm(); // Defined in setupAiPrescription
+                resetRecordingUI();    // Defined in setupAiPrescription
+
+                showCallScreen(patientName, appointmentId);
+            } else {
+                console.error("Missing data needed to start call for button:", e.currentTarget);
+                showConfirmationModal("Error", "Could not initiate call. Appointment details missing.");
+            }
+        });
+    });
+    document.querySelectorAll('#appointmentsList .btn-message').forEach(btn => {
+        btn.addEventListener('click', () => showMessageModal(btn.dataset.id));
+    });
 }
 // REVISED showPatientSummary - Accepts patientId and patientName directly
 async function showPatientSummary(appointmentId, patientId, patientName) {
