@@ -2344,7 +2344,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 
     try {
         // --- ADDED: Call the backend logout endpoint ---
-        const response = await fetch(`${API_BASE_URL}/v1/logout`, {
+        const response = await fetch(`${API_BASE_URL}/logout`, {
             method: 'POST',
             credentials: 'include', // Important: Sends the session cookie
             headers: {
