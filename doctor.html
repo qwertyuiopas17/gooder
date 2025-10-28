@@ -1643,58 +1643,42 @@ Possible solutions:
                 ]
             };
             
-            async function checkAuth() {
-    console.log("Running checkAuth for doctor..."); // Add logging
-    try {
-        const response = await fetch(`${API_BASE_URL}/doctor/profile`, {
-            method: 'GET',
-            credentials: 'include', // Crucial: sends the session cookie
-            headers: {
-                'Content-Type': 'application/json',
-                // Add cache-control headers to potentially help bypass browser cache on this check
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
+            function checkAuth() {
+                // Fetch doctor profile from backend
+                return fetch(`${API_BASE_URL}/doctor/profile`, { // <-- MODIFY THIS LINE
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.doctor) {
+                        doctor = {
+                            fullName: data.doctor.fullName,
+                            doctorId: data.doctor.doctorId,
+                            email: data.doctor.email,
+                            specialization: data.doctor.specialization,
+                            qualification: data.doctor.qualification,
+                            experience: data.doctor.experience,
+                            clinicName: data.doctor.clinicName,
+                            phoneNumber: data.doctor.phoneNumber,
+                            profileImageUrl: data.doctor.profileImageUrl
+                        };
+                        return true;
+                    } else {
+                        // Redirect to login if not authenticated
+                        window.location.href = 'index.html';
+                        return false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Auth check failed:', error);
+                    window.location.href = 'index.html';
+                    return false;
+                });
             }
-        });
-
-        // --- THIS IS THE CRITICAL CHECK ---
-        if (!response.ok) {
-            // If response status is not 2xx (e.g., 401, 403, 404, 500)
-            console.error(`Auth check failed with status: ${response.status}`);
-            // Redirect immediately if not authenticated/authorized
-            window.location.href = 'index.html';
-            return false; // Indicate failure
-        }
-        // --- END CRITICAL CHECK ---
-
-        // If response.ok is true, proceed to parse JSON
-        const data = await response.json();
-
-        if (data.success && data.doctor) {
-            // Successfully authenticated
-            doctor = { // Assign to your global 'doctor' variable
-                fullName: data.doctor.fullName,
-                doctorId: data.doctor.doctorId, // Store the string ID if needed
-                email: data.doctor.email,
-                // Add other fields as necessary from data.doctor
-            };
-            console.log("Doctor authenticated:", doctor.fullName);
-            return true; // Indicate success
-        } else {
-            // Backend indicated success: false or missing doctor data
-            console.warn("Auth check response OK, but backend reported failure or missing data.");
-            window.location.href = 'index.html';
-            return false; // Indicate failure
-        }
-
-    } catch (error) {
-        // Handle network errors or other exceptions during fetch
-        console.error('Auth check fetch error:', error);
-        window.location.href = 'index.html';
-        return false; // Indicate failure
-    }
-}
 
             function updateUIText() {
                 const langPack = translations[currentLanguage] || translations.en;
@@ -2331,7 +2315,6 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
 
             async function initializeApp() {
                 const isAuthenticated = await checkAuth();
-                console.log("Authentication successful, initializing doctor app...");
                 if(isAuthenticated){
                     setupNavigation();
                     setupThemeAndLanguage();
@@ -2402,15 +2385,21 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     console.log("Started polling for appointments every 30 seconds.");
     // --- END POLLING START ---
 
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+       // --- STOP POLLING ON LOGOUT ---
+       if (appointmentPollingInterval) {
+           clearInterval(appointmentPollingInterval);
+           console.log("Stopped polling for appointments on logout.");
+       }
+       // --- END STOP POLLING ---
+       localStorage.removeItem('sehatSaharaDoctor');
+       window.location.href = 'index.html';
+    });
 
     updateUIText();
     // ... (rest of initializeApp if any) ...
-}else {
-        console.log("Authentication failed, user redirected (or should have been).");
-        // No need to run the rest of the app initialization
-    }
 }
-            
+            }
 
             initializeApp();
         });
