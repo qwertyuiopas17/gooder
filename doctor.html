@@ -1646,7 +1646,7 @@ Possible solutions:
             async function checkAuth() {
     console.log("Running checkAuth for doctor..."); // Add logging
     try {
-        const response = await fetch(`${API_BASE_URL}/v1/doctor/profile`, {
+        const response = await fetch(`${API_BASE_URL}/doctor/profile`, {
             method: 'GET',
             credentials: 'include', // Crucial: sends the session cookie
             headers: {
