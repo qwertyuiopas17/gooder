@@ -1748,7 +1748,144 @@ Possible solutions:
 
             // In doctor.html, replace the entire generateAppointments function with this
 
+async function generateAppointments() {
+    const container = document.getElementById('appointmentsList');
+    // Store the currently displayed HTML content to prevent flickering during loading if fetch is fast
+    const currentHtml = container.innerHTML;
+    // Show a subtle loading indicator without clearing everything immediately if polling
+    // (You might add a small loading spinner element instead)
+    if (!currentHtml || currentHtml.includes('<p')) { // Only show full loading if empty or showing placeholder
+         container.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading appointments...</p>';
+    }
 
+    let fetchedAppointments = [];
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/doctor/dashboard`, { credentials: 'include' });
+        const data = await response.json();
+
+        if (data.success && data.appointments) {
+            console.log("Fetched live appointments:", JSON.stringify(data.appointments));
+            fetchedAppointments = data.appointments;
+        } else {
+            console.warn("API call failed or no appointments. Using previous/mock data.");
+            // Keep existing appData if fetch fails during polling
+            fetchedAppointments = appData.appointments || []; // Use existing or empty array
+        }
+    } catch (error) {
+        console.error("Error fetching appointments:", error);
+        // Keep existing appData on error during polling
+        fetchedAppointments = appData.appointments || []; // Use existing or empty array
+        // Show error only if it's the initial load (no previous data)
+        if (!appData.appointments || appData.appointments.length === 0) {
+             container.innerHTML = '<p style="text-align: center; padding: 2rem; color: red;">Could not load appointments.</p>';
+        }
+    }
+
+    // --- Update appData AFTER fetch/fallback ---
+    // Check if the fetched data is substantially different before re-rendering (optional optimization)
+    if (JSON.stringify(appData.appointments) !== JSON.stringify(fetchedAppointments)) {
+        console.log("Appointment data changed, updating appData and re-rendering.");
+        appData.appointments = fetchedAppointments;
+
+        // --- Populate dropdown ---
+        const patientSelectDropdown = document.getElementById('patient-select');
+        if (patientSelectDropdown) {
+             // ... (Dropdown population logic remains the same as your latest version) ...
+             patientSelectDropdown.innerHTML = '';
+             const validAppointments = appData.appointments.filter(appt => appt && appData.patientId && appData.patient); // Check correct properties
+             const uniquePatients = [...new Map(validAppointments.map(item => [item.patientId, item])).values()];
+             // ... (rest of dropdown logic) ...
+             if (uniquePatients.length > 0) {
+                 uniquePatients.forEach(appt => { /* ... create option ... */ });
+                 document.getElementById('uploadRxForm').dataset.patientId = patientSelectDropdown.value;
+                 patientSelectDropdown.removeEventListener('change', updateUploadFormPatientId);
+                 patientSelectDropdown.addEventListener('change', updateUploadFormPatientId);
+             } else { /* ... handle no patients ... */ }
+        }
+
+
+        // --- Render list HTML ---
+        const now = new Date();
+        const validAppointmentsForRender = appData.appointments.filter(appt => appt && appt.dateTime);
+        const upcomingAppointments = validAppointmentsForRender.filter(appt => new Date(appt.dateTime) >= now);
+
+        if (upcomingAppointments.length === 0) {
+            container.innerHTML = `<p style="text-align: center; padding: 2rem;">You have no upcoming appointments today.</p>`;
+        } else {
+            // Build the HTML
+            container.innerHTML = upcomingAppointments.map(appt => {
+                const appointmentKey = appt.id || appt.appointmentId || appt.appointment_id; // Use correct ID key
+                return `
+                <div class="card appointment-card" data-id="${appointmentKey || ''}">
+                    {/* ... card details ... */}
+                     <h4>${appt.patient || 'Unknown Patient'}</h4>
+                     <p>${appt.time || 'N/A'} &middot; ${(appt.type || 'Video').charAt(0).toUpperCase() + (appt.type || 'Video').slice(1)} Call</p>
+                    {/* ... end card details ... */}
+                    <div class="appointment-actions">
+                         {/* Pass patientId and patientName directly in data attributes for easier access */}
+                         <button class="btn btn-sm btn-call" data-patient="${appt.patient || 'Unknown Patient'}" data-patient-id="${appt.patientId || ''}" data-appointment-id="${appointmentKey || ''}" data-key="call_patient">Call</button>
+                         <button class="btn btn-sm btn-message" data-id="${appointmentKey || ''}" data-key="message_patient">Message</button> {/* Message might still need lookup */}
+                         <button class="btn btn-sm btn-neutral view-rx-btn" data-id="${appointmentKey || ''}" data-key="view_prescription">View Rx</button> {/* Rx might still need lookup */}
+                         <button class="btn btn-sm btn-primary view-summary-btn" data-id="${appointmentKey || ''}" data-patient-id="${appt.patientId || ''}" data-patient-name="${appt.patient || 'Unknown Patient'}" data-key="view_summary">Summary</button> {/* Pass ALL needed data */}
+                    </div>
+                </div>`;
+            }).join('');
+
+            // --- Attach Event Listeners AFTER rendering ---
+            container.querySelectorAll('.view-summary-btn').forEach(btn => {
+                const apptId = btn.dataset.id;
+                const patId = btn.dataset.patientId; // Get patientId directly
+                const patName = btn.dataset.patientName; // Get patientName directly
+                if (apptId && patId) {
+                    // Remove previous listener before adding new one
+                    btn.replaceWith(btn.cloneNode(true));
+                    container.querySelector(`.view-summary-btn[data-id="${apptId}"]`)
+                             // Pass data directly to the handler
+                             .addEventListener('click', () => showPatientSummary(apptId, patId, patName));
+                } else {
+                    console.error("Summary button missing required data attributes (data-id, data-patient-id):", btn);
+                }
+            });
+
+            // Update other listeners similarly if needed, passing necessary data directly
+            container.querySelectorAll('.btn-call').forEach(btn => {
+                const apptId = btn.dataset.appointmentId;
+                const patId = btn.dataset.patientId;
+                const patName = btn.dataset.patient;
+                 if (apptId && patId) {
+                     btn.replaceWith(btn.cloneNode(true));
+                     container.querySelector(`.btn-call[data-appointment-id="${apptId}"]`)
+                              .addEventListener('click', () => {
+                                  // Set context for prescription forms before showing call screen
+                                  currentAppointment = { id: apptId, patientId: patId, patient: patName }; // Update global context
+                                  const prescriptionForm = document.getElementById('prescriptionForm');
+                                  const uploadRxForm = document.getElementById('uploadRxForm');
+                                  if(prescriptionForm) {
+                                      prescriptionForm.dataset.patientId = patId;
+                                      const nameSpan = document.getElementById('prescriptionPatientName');
+                                      if(nameSpan) nameSpan.textContent = patName;
+                                  }
+                                  if(uploadRxForm) {
+                                      uploadRxForm.dataset.patientId = patId;
+                                      const patientSelect = document.getElementById('patient-select');
+                                      if(patientSelect) patientSelect.value = patId;
+                                  }
+                                  showCallScreen(patName, apptId);
+                              });
+                 }
+            });
+             // (Add listener re-attachment for view-rx-btn and btn-message)
+
+        } // End if upcomingAppointments
+    } // End if data changed
+     else {
+         console.log("Appointment data hasn't changed, skipping re-render.");
+         // Ensure listeners are still attached if needed, or rely on them persisting
+    }
+
+    updateUIText();
+}
 // REVISED showPatientSummary - Accepts patientId and patientName directly
 async function showPatientSummary(appointmentId, patientId, patientName) {
     console.log(`Showing summary for Appt ID: ${appointmentId}, Patient ID: ${patientId}, Name: ${patientName}`);
