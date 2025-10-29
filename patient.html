@@ -3535,10 +3535,10 @@ if (SpeechRecognition) {
                 testPrescriptionEndpoint();
             }
 
-            // WebRTC variables
+            
 // --- START: Agora Variables ---
 const AGORA_APP_ID = "5ce1cf67c1f142478e0f3ed61cb8958f"; // Use the SAME App ID
-let TEMP_TOKEN = "007eJxTYFhkZCBakLWg4+jmp0fLPyjYBUm/3Hgl8PnhlZ4FM7dd9ZRTYDBNTjVMTjMzTzZMMzQxMjG3SDVIM05NMTNMTrKwNLVIk7RhymwIZGRQdpJkYWSAQBCflyElNTdfNzkxJ0fX0MiYgQEAmr4hLQ=="; // Fetch or use the SAME temporary token for the channel
+
 let agoraClient = null;
 let localAudioTrack = null;
 let localVideoTrack = null;
@@ -3616,6 +3616,48 @@ function initializeAgoraClient() {
         }
     });
 
+}
+// Add this helper function somewhere accessible in your script
+async function fetchAgoraToken(channelName) {
+    try {
+        console.log(`Requesting Agora token for channel: ${channelName}`);
+        const response = await fetch(`${API_BASE_URL}/agora/token`, { // Use your API_BASE_URL
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            // *** IMPORTANT: Tells fetch to send cookies (like your session cookie) ***
+            credentials: 'include',
+            body: JSON.stringify({
+                channelName: channelName
+                // uid: 0 // Optional: Backend defaults to 0 if not sent
+            })
+        });
+
+        if (!response.ok) {
+            // Try to get error message from backend
+            let errorMsg = `Server error: ${response.status}`;
+            try {
+                 const errorData = await response.json();
+                 errorMsg = errorData.error || errorMsg;
+            } catch(jsonError) { /* Ignore if response not JSON */ }
+            throw new Error(errorMsg);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.token) {
+            console.log("Successfully received Agora token.");
+            return data.token;
+        } else {
+            throw new Error(data.error || 'Backend failed to provide a token.');
+        }
+
+    } catch (error) {
+        console.error('Error fetching Agora token:', error);
+        showConnectionStatus(`Error getting call token: ${error.message}`, 'error'); // Show error to user
+        return null; // Indicate failure
+    }
 }
 
 // Join Agora Channel and Publish Tracks
@@ -4564,30 +4606,27 @@ function displayMessage(message, sender) {
                 // Initialize chatbot, loads initial message & checks reminders ONCE
                 // Add this listener during initialization (e.g., inside initializeApp or setupFormsAndModals)
 
+// Modify the #startCallBtn listener (inside initializeApp or setupFormsAndModals)
 const startCallButton = document.getElementById('startCallBtn');
 if (startCallButton) {
-    startCallButton.addEventListener('click', () => {
-        // Check if we have a valid channel name from showCallScreen
+    startCallButton.addEventListener('click', async () => { // Make the listener async
         if (currentChannelName) {
-            console.log(`Start Call button clicked. Attempting to join channel: ${currentChannelName}`);
-            startCallButton.textContent = 'Joining...';
+            console.log(`Start Call button clicked. Attempting join for channel: ${currentChannelName}`);
+            startCallButton.textContent = 'Connecting...'; // Update text
             startCallButton.disabled = true;
 
-            // --- IMPORTANT ---
-            // In Production: Fetch your secure token from the backend HERE
-            // using currentChannelName before calling joinAndPublish.
-            // Example:
-            // const token = await fetchAgoraToken(currentChannelName);
-            // if (token) {
-            //    joinAndPublish(currentChannelName, token);
-            // } else {
-            //    showConnectionStatus("Error getting call token", "error");
-            //    startCallButton.textContent = 'Start Call';
-            //    startCallButton.disabled = false;
-            // }
+            // --- Fetch the token ---
+            const token = await fetchAgoraToken(currentChannelName);
 
-            // For Testing with TEMP_TOKEN:
-            joinAndPublish(currentChannelName, TEMP_TOKEN);
+            if (token) {
+                // --- Join only if token was successfully fetched ---
+                joinAndPublish(currentChannelName, token); // Use the fetched token
+            } else {
+                // Token fetch failed, reset the button
+                showConnectionStatus("Failed to get call token. Please try again.", "error");
+                startCallButton.textContent = 'Start Call';
+                startCallButton.disabled = false;
+            }
 
         } else {
             console.error("Cannot start call, channel name (appointmentId) is missing.");
