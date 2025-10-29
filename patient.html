@@ -3565,7 +3565,7 @@ function initializeAgoraClient() {
             const remoteVideoPlayer = document.getElementById("remoteVideo");
             remoteVideoPlayer.textContent = ""; // Clear any previous placeholder
             remoteVideoTrack.play("remoteVideo");
-            showConnectionStatus('Patient connected!', 'success');
+            showConnectionStatus('Doctor connected!', 'success');
         }
 
         if (mediaType === "audio") {
@@ -3590,7 +3590,7 @@ function initializeAgoraClient() {
         remoteUser = null;
         const remoteVideoPlayer = document.getElementById("remoteVideo");
         remoteVideoPlayer.innerHTML = '<p>Patient has left the call</p>';
-        showConnectionStatus('Patient left', 'warning');
+        showConnectionStatus('Doctor left', 'warning');
         // Optionally end the call for the doctor too, or wait
     });
 
@@ -3749,6 +3749,7 @@ async function leaveCall() {
     hideConnectionStatus();
     document.getElementById('callScreen').classList.remove('active'); // Hide the call screen overlay
     showScreen('dashboardScreen'); // Go back to dashboard after ending call
+    await generateAppointments();
 }
 
 // --- END: Agora Functions ---
