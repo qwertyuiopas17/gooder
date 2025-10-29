@@ -916,8 +916,31 @@ async function joinAndPublish(channelName, token) {
         console.log("Successfully joined channel:", channelName, "with UID:", uid);
 
         // Create microphone and camera tracks
-        showConnectionStatus('Accessing camera and microphone...', 'info');
-        [localAudioTrack, localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+        // Create microphone and camera tracks explicitly
+showConnectionStatus('Accessing microphone...', 'info');
+localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+
+showConnectionStatus('Accessing front camera...', 'info');
+try {
+    localVideoTrack = await AgoraRTC.createCameraVideoTrack({
+        // encoderConfig: "480p_1", // Optional: Specify resolution like 480p, 720p etc.
+        facingMode: "user" // Request the front camera
+    });
+} catch (cameraError) {
+    console.error("Failed to get front camera:", cameraError);
+    showConnectionStatus('Could not access front camera. Trying default.', 'warning');
+    // Fallback to default camera if front camera fails
+    try {
+        localVideoTrack = await AgoraRTC.createCameraVideoTrack({ /* encoderConfig: "480p_1" */ });
+    } catch (fallbackError) {
+         console.error("Failed to get any camera:", fallbackError);
+         showConnectionStatus('Error accessing camera.', 'error');
+         // Handle the case where no camera is available (e.g., disable video features)
+         // You might want to call leaveCall() or show an error message.
+         leaveCall(); // Example: End call attempt if camera fails critically
+         return; // Stop further execution in joinAndPublish
+    }
+}
 
         // Play local video
         const localVideoPlayer = document.getElementById("localVideo");
