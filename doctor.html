@@ -702,23 +702,45 @@ let currentChannelName = null; // Will be set based on appointmentId
 
             
             // In doctor.html, inside the <script> block
-// In doctor.html, INSIDE the <script> block
-function showCallScreen(patientName, appointmentId) {
-    currentAppointmentId = appointmentId; // Keep this for context if needed elsewhere
-    document.getElementById('consultationHeader').textContent = `Consultation with ${patientName}`;
-    showScreen('consultationScreen');
+// In doctor.html
+function showCallScreen(patientName, appointmentId) { // <<< Use patientName here
+    currentAppointmentId = appointmentId;
+    currentChannelName = appointmentId;
+
+    const headerElement = document.getElementById('consultationHeader');
+    if (headerElement) headerElement.textContent = `Consultation with ${patientName}`; // <<< Use patientName here
+
+    showScreen('consultationScreen'); // Doctor uses showScreen
+
+    // Clear video elements and hide status
+    const localVideoPlayer = document.getElementById('localVideo');
+    const remoteVideoPlayer = document.getElementById('remoteVideo');
+    if (localVideoPlayer) localVideoPlayer.innerHTML = '';
+    if (remoteVideoPlayer) remoteVideoPlayer.innerHTML = '<p>Waiting to connect...</p>';
     hideConnectionStatus();
 
-    // --- START: Agora Initialization and Join Trigger ---
-    if (!agoraClient) {
-        initializeAgoraClient(); // Initialize if not already done
+    // Initialize Agora Client if needed (or if disconnected)
+    // Using agoraClient = null in leaveCall makes this check reliable
+    if (!agoraClient || agoraClient.connectionState === 'DISCONNECTED') {
+        console.log("Initializing Agora Client for new call...");
+        initializeAgoraClient();
+    } else {
+        console.log("Agora Client already exists, state:", agoraClient.connectionState);
+        // Even if client exists but wasn't fully cleaned up, ensure button is ready
     }
-    // Use appointmentId as the channel name for uniqueness
-    // In a real app, FETCH a secure token from your backend here using appointmentId
-    // For testing, we use the temporary token directly
-    console.log(`Attempting to join channel: ${appointmentId}`);
-    joinAndPublish(appointmentId, TEMP_TOKEN); // Pass channel name and token
-    // --- END: Agora Initialization and Join Trigger ---
+
+    // *** CRITICAL CHANGE: Ensure Start Button is ready ***
+    const startBtn = document.getElementById('startCallBtn');
+    if (startBtn) {
+        startBtn.textContent = 'Start Call'; // Set text correctly
+        startBtn.disabled = false;         // Ensure it's enabled
+    } else {
+        console.error("Start Call button not found!");
+    }
+
+    // *** REMOVED THE AUTOMATIC CALL TO joinAndPublish ***
+    // console.log(`Attempting to join channel: ${appointmentId}`); // No longer joining here
+    // joinAndPublish(appointmentId, TEMP_TOKEN); // <--- REMOVED THIS LINE
 }
 
 
@@ -1822,6 +1844,43 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                     setupFormsAndModals();
                     setupAiPrescription();
                     // --- ADD THIS EVENT LISTENER ---
+                    // Add this listener during initialization (e.g., inside initializeApp or setupFormsAndModals)
+
+const startCallButton = document.getElementById('startCallBtn');
+if (startCallButton) {
+    startCallButton.addEventListener('click', () => {
+        // Check if we have a valid channel name from showCallScreen
+        if (currentChannelName) {
+            console.log(`Start Call button clicked. Attempting to join channel: ${currentChannelName}`);
+            startCallButton.textContent = 'Joining...';
+            startCallButton.disabled = true;
+
+            // --- IMPORTANT ---
+            // In Production: Fetch your secure token from the backend HERE
+            // using currentChannelName before calling joinAndPublish.
+            // Example:
+            // const token = await fetchAgoraToken(currentChannelName);
+            // if (token) {
+            //    joinAndPublish(currentChannelName, token);
+            // } else {
+            //    showConnectionStatus("Error getting call token", "error");
+            //    startCallButton.textContent = 'Start Call';
+            //    startCallButton.disabled = false;
+            // }
+
+            // For Testing with TEMP_TOKEN:
+            joinAndPublish(currentChannelName, TEMP_TOKEN);
+
+        } else {
+            console.error("Cannot start call, channel name (appointmentId) is missing.");
+            showConnectionStatus("Error: Appointment ID missing.", "error");
+            startCallButton.textContent = 'Start Call'; // Reset button if context is missing
+            startCallButton.disabled = false;
+        }
+    });
+} else {
+    console.error("Could not find the Start Call button element!");
+}
                     // Inside initializeApp() or where the listener is added:
 document.getElementById('joinDemoCallBtn')?.addEventListener('click', () => {
     // Use a consistent ID and token for the demo channel
