@@ -3549,21 +3549,31 @@ let retryDelay = 1000; // Start with 1 second
 // Enhanced WebRTC configuration with multiple STUN/TURN servers
  // <-- End replacement here
 const configuration = {
-    iceServers: [ // <-- Start replacement here
+    iceServers: [
+        // STUN servers for NAT traversal
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+
+        // TURN servers for fallback when STUN fails
         {
-            "urls": ["stun:stun.turnix.io:3478"] // Turnix STUN server
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
         },
         {
-            "username": "ecd76bb0-190d-4c56-84ce-b4517b23eaae", // Your NEWEST Turnix username
-            "credential": "6b69b513707e66b4956a8b1ac12b0a35", // Your NEWEST Turnix credential/password
-            "urls": [ // Turnix TURN servers
-                "turn:eu-central.turnix.io:3478?transport=udp",
-                "turn:eu-central.turnix.io:3478?transport=tcp",
-                "turns:eu-central.turnix.io:443?transport=udp", // Can be commented out if causing issues
-                "turns:eu-central.turnix.io:443?transport=tcp"  // Can be commented out if causing issues
-            ]
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
         }
-    ], // <-- End replacement here
+    ],
     iceCandidatePoolSize: 10,
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require'
