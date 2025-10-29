@@ -3547,19 +3547,20 @@ let maxRetries = 3;
 let retryDelay = 1000; // Start with 1 second
 
 // Enhanced WebRTC configuration with multiple STUN/TURN servers
+ // <-- End replacement here
 const configuration = {
     iceServers: [ // <-- Start replacement here
         {
             "urls": ["stun:stun.turnix.io:3478"] // Turnix STUN server
         },
         {
-            "username": "6b1b1870-a3cd-44a2-8fe3-7b28d5f91445", // Your Turnix username
-            "credential": "2bddbde9ab102db3718dcff49302d73b", // Your Turnix credential/password
-            "urls": [ // Turnix TURN servers (different ports/transports)
+            "username": "ecd76bb0-190d-4c56-84ce-b4517b23eaae", // Your NEWEST Turnix username
+            "credential": "6b69b513707e66b4956a8b1ac12b0a35", // Your NEWEST Turnix credential/password
+            "urls": [ // Turnix TURN servers
                 "turn:eu-central.turnix.io:3478?transport=udp",
                 "turn:eu-central.turnix.io:3478?transport=tcp",
-                //"turns:eu-central.turnix.io:443?transport=udp", // Often commented out if TLS/SSL cert issue
-                //"turns:eu-central.turnix.io:443?transport=tcp"  // Often commented out if TLS/SSL cert issue
+                "turns:eu-central.turnix.io:443?transport=udp", // Can be commented out if causing issues
+                "turns:eu-central.turnix.io:443?transport=tcp"  // Can be commented out if causing issues
             ]
         }
     ], // <-- End replacement here
