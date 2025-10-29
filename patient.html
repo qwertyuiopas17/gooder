@@ -3631,15 +3631,20 @@ function createPeerConnection() {
         }
 
         peerConnection.ontrack = event => {
-            console.log('Patient: Received remote stream', event.streams[0]);
-            const remoteVideo = document.getElementById('remoteVideo');
-            if (remoteVideo && event.streams[0]) {
-                if (remoteVideo.srcObject !== event.streams[0]) {
-                    remoteVideo.srcObject = event.streams[0];
-                    playRemoteVideo(remoteVideo); // Use helper to play
-                }
-            }
-        };
+    console.log('Patient: Received remote stream', event.streams[0]);
+    const remoteVideo = document.getElementById('remoteVideo');
+    if (remoteVideo && event.streams[0]) {
+        // *** Check if the srcObject is ALREADY set to this stream ***
+        if (remoteVideo.srcObject !== event.streams[0]) {
+            console.log("Patient: Setting new remote stream source.");
+            remoteVideo.srcObject = event.streams[0];
+            // *** Attempt play ONLY when setting the source ***
+            playRemoteVideo(remoteVideo); // Use your helper function
+        } else {
+            console.log("Patient: Ignoring duplicate ontrack event for the same stream.");
+        }
+    }
+};
 
         peerConnection.onconnectionstatechange = () => {
              console.log('Patient: Connection state:', peerConnection.connectionState);
