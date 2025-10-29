@@ -795,41 +795,7 @@ function hideConnectionStatus() {
 // function toggleAudio() { ... }
 // function toggleVideo() { ... }
 
-function endCall() {
-    console.log('Doctor: Ending call...');
-    isCallActive = false; // Stop polling and prevent retries
 
-    if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-    }
-    if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-    }
-     if (dataChannel) {
-        dataChannel.close();
-        dataChannel = null;
-    }
-
-    // Reset UI specific to doctor
-    showScreen('dashboardScreen'); // Go back to dashboard
-    const remoteVideo = document.getElementById('remoteVideo');
-    const localVideo = document.getElementById('localVideo');
-    if (remoteVideo) remoteVideo.srcObject = null;
-    if (localVideo) localVideo.srcObject = null;
-    const startBtn = document.getElementById('startCallBtn');
-     if(startBtn) { startBtn.disabled = false; startBtn.textContent = 'Start Call'; }
-    // Reset mute buttons if they exist
-
-    // Reset state variables
-    currentAppointmentId = null;
-    iceCandidateQueue = [];
-    isInitiator = false;
-    retryCount = 0;
-    retryDelay = 1000;
-    hideConnectionStatus();
-}
 
 // --- START: Agora Functions ---
 
@@ -990,7 +956,7 @@ async function leaveCall() {
              console.error("Error leaving Agora channel:", error);
         }
         // Optional: Destroy the client instance if completely done
-        // agoraClient = null;
+        agoraClient = null;
     }
 
     // Reset UI
