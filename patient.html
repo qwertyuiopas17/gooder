@@ -3748,7 +3748,7 @@ async function leaveCall() {
     // --- End Reset Mute Buttons ---
     hideConnectionStatus();
     document.getElementById('callScreen').classList.remove('active'); // Hide the call screen overlay
-    showScreen('dashboardScreen'); // Go back to dashboard after ending call
+    showScreen('appointmentsScreen'); // Go back to dashboard after ending call
     await generateAppointments();
 }
 
