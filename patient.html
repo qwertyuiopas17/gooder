@@ -3653,6 +3653,31 @@ async function joinAndPublish(channelName, token) {
         leaveCall(); // Clean up on error
     }
 }
+// Inside patient.html
+function toggleAgoraAudio() {
+    console.log("toggleAgoraAudio called. localAudioTrack:", localAudioTrack); // Add log
+    if (localAudioTrack) {
+        isAgoraAudioMuted = !isAgoraAudioMuted;
+        localAudioTrack.setEnabled(!isAgoraAudioMuted); // Enable/disable the track
+        document.getElementById('muteAudioBtn').textContent = isAgoraAudioMuted ? 'Unmute Audio' : 'Mute Audio';
+        console.log(`Agora Audio ${isAgoraAudioMuted ? 'Muted' : 'Unmuted'}`);
+    } else {
+        console.warn("Cannot toggle audio: localAudioTrack is not available."); // Add warning
+    }
+}
+
+function toggleAgoraVideo() {
+    console.log("toggleAgoraVideo called. localVideoTrack:", localVideoTrack); // Add log
+    if (localVideoTrack) {
+        isAgoraVideoMuted = !isAgoraVideoMuted;
+        localVideoTrack.setEnabled(!isAgoraVideoMuted); // Enable/disable the track
+        document.getElementById('muteVideoBtn').textContent = isAgoraVideoMuted ? 'Unmute Video' : 'Mute Video';
+        document.getElementById('localVideo').style.display = isAgoraVideoMuted ? 'none' : 'block';
+        console.log(`Agora Video ${isAgoraVideoMuted ? 'Muted' : 'Unmuted'}`);
+    } else {
+        console.warn("Cannot toggle video: localVideoTrack is not available."); // Add warning
+    }
+}
 
 // Leave Agora Channel and Clean Up
 async function leaveCall() {
