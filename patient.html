@@ -3775,22 +3775,27 @@ async function handleSignalingMessage(type, data) {
 
     try {
         if (type === 'offer') {
-            if (peerConnection.signalingState !== 'stable') {
-                // Handle offer collision based on role
-                if (peerConnection.signalingState === 'have-local-offer' && !isInitiator) {
-                    console.log("Collision: Patient becomes callee, resetting.");
-                    await resetConnection(); // Reset and wait for the offer again implicitly via polling
-                } else if (peerConnection.signalingState === 'have-local-offer' && isInitiator) {
+            // Check if we are in a collision state (we already sent an offer)
+            if (peerConnection.signalingState === 'have-local-offer') {
+                
+                // We are the initiator, so we IGNORE the incoming offer
+                // The other side (doctor) will get our offer and send an answer.
+                if (isInitiator) {
                     console.log("Collision: Patient is initiator, ignoring doctor's offer.");
-                    return; // Ignore the incoming offer
-                } else {
-                    console.warn("Received offer in unexpected state:", peerConnection.signalingState);
-                    // Decide how to handle this - maybe queue or reset
-                    return;
+                    return; // <--- This is the correct behavior
+                } 
+                // We are NOT the initiator, but we are in a collision.
+                // We should reset and let the doctor's offer come through.
+                else {
+                    console.log("Collision: Patient becomes callee, resetting.");
+                    await resetConnection();
+                    // We must still process the offer that just came in
                 }
             }
-             await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-             await answerCall(); // Create and send answer
+
+            // If it's not a collision, just treat it as a normal incoming call
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+            await answerCall(); // Create and send answer
 
         } else if (type === 'answer') {
             if (peerConnection.signalingState === 'have-local-offer') {
