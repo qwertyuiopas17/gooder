@@ -3548,36 +3548,21 @@ let retryDelay = 1000; // Start with 1 second
 
 // Enhanced WebRTC configuration with multiple STUN/TURN servers
 const configuration = {
-    iceServers: [
-        // --- Keep your STUN servers ---
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-
-        // --- Add your metered.in TURN servers ---
-        // Replace with YOUR actual metered.in details
+    iceServers: [ // <-- Start replacement here
         {
-            urls: "turn:relay1.expressturn.com:3480", // Example URL
-            username: "000000002077081246", // Replace with your username
-            credential: "98/51gtZwBfYHuYWmDt0A93lTvU=" // Replace with your API key
+            "urls": ["stun:stun.turnix.io:3478"] // Turnix STUN server
         },
         {
-            urls: "turn:turn.metered.ca:443", // Example URL
-            username: "Your_Metered_Username", // Replace with your username
-            credential: "Your_Metered_API_Key" // Replace with your API key
-        },
-        {
-             urls: "turns:turn.metered.ca:443?transport=tcp", // Example URL (secure + TCP)
-             username: "Your_Metered_Username", // Replace with your username
-             credential: "Your_Metered_API_Key" // Replace with your API key
+            "username": "6b1b1870-a3cd-44a2-8fe3-7b28d5f91445", // Your Turnix username
+            "credential": "2bddbde9ab102db3718dcff49302d73b", // Your Turnix credential/password
+            "urls": [ // Turnix TURN servers (different ports/transports)
+                "turn:eu-central.turnix.io:3478?transport=udp",
+                "turn:eu-central.turnix.io:3478?transport=tcp",
+                "turns:eu-central.turnix.io:443?transport=udp", // Often commented out if TLS/SSL cert issue
+                "turns:eu-central.turnix.io:443?transport=tcp"  // Often commented out if TLS/SSL cert issue
+            ]
         }
-
-        // --- You can keep or remove the openrelay servers ---
-        // { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-        // ...
-    ],
+    ], // <-- End replacement here
     iceCandidatePoolSize: 10,
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require'
