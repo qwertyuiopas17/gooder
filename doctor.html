@@ -767,59 +767,7 @@ async function processQueuedIceCandidates() {
 }
 
 
-// Function to send signaling messages via fetch, WITH RETRY
-async function sendSignalingMessageWithRetry(type, data) {
-    let attempt = 0;
-    while (attempt < maxRetries) {
-        try {
-            console.log(`Doctor: Sending ${type} (Attempt ${attempt + 1})`);
-            // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
-            const response = await fetch(`${API_BASE_URL}/webrtc/${type}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
-            });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            console.log(`Doctor: ${type} sent successfully.`);
-            return; // Success
-        } catch (error) {
-            attempt++;
-            console.error(`Doctor: Signaling error (Attempt ${attempt}):`, error);
-            if (attempt >= maxRetries) {
-                 console.error(`Doctor: Max retries reached for ${type}.`);
-                 throw error; // Re-throw after max retries
-            }
-            const delay = retryDelay * Math.pow(2, attempt -1); // Exponential backoff
-            console.log(`Doctor: Retrying ${type} in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-}
 
-// Keep the non-retry version if needed elsewhere, but prefer the retry one for offers/answers
-function sendSignalingMessage(type, data) {
-    // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
-    fetch(`${API_BASE_URL}/webrtc/${type}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId: currentAppointmentId, data: data })
-    }).catch(error => console.error('Doctor: Signaling error:', error));
-}
-
-
-function pollSignaling() {
-    if (!currentAppointmentId || !isCallActive) return; // Only poll if call is active
-
-    // *** IMPORTANT: Ensure the endpoint includes /v1/ ***
-    fetch(`${API_BASE_URL}/webrtc/poll?appointmentId=${currentAppointmentId}`)
-        .then(response => response.ok ? response.json() : Promise.reject(`HTTP ${response.status}`))
-        .then(messages => {
-            if (messages && messages.length > 0) {
-                 messages.forEach(msg => handleSignalingMessage(msg.type, msg.data));
-            }
-        })
-        .catch(error => console.error('Doctor: Polling error:', error));
-}
 
 // UI Status Functions (showConnectionStatus, hideConnectionStatus, etc.) - Keep these
 function showConnectionStatus(message, type = 'info') {

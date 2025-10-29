@@ -3722,49 +3722,9 @@ function showCallScreen(doctorName, appointmentId) {
 }
 
 
-// Helper to set up data channel event listeners
-function setupDataChannelEvents(channel) {
-    channel.onmessage = event => displayMessage(event.data, 'doctor'); // Display incoming messages
-    channel.onopen = () => console.log('Data channel opened');
-    channel.onclose = () => console.log('Data channel closed');
-    channel.onerror = (error) => console.error('Data channel error:', error);
-}
+
 
 // Helper to play remote video robustly
-async function playRemoteVideo(videoElement, retryCount = 0) {
-     try {
-         console.log(`Patient: Attempting to play remote video (Attempt ${retryCount + 1})`);
-         await videoElement.play();
-         console.log('Patient: Remote video playing successfully');
-         showConnectionStatus('Remote video connected!', 'success'); // Update status
-     } catch (e) {
-         console.warn(`Patient: Remote video play failed (Attempt ${retryCount + 1}):`, e);
-         if (e.name === 'NotAllowedError') {
-             showConnectionStatus('Video autoplay blocked. Click video to play.', 'warning');
-             videoElement.addEventListener('click', () => playRemoteVideo(videoElement), { once: true });
-         } else if (retryCount < 3) {
-             setTimeout(() => playRemoteVideo(videoElement, retryCount + 1), 500); // Retry shortly
-         } else {
-              showConnectionStatus('Could not play remote video.', 'error');
-         }
-     }
-}
-
-
-
-
-// Helper function to process queued ICE candidates
-async function processQueuedIceCandidates() {
-    while (iceCandidateQueue.length > 0) {
-        const candidate = iceCandidateQueue.shift();
-        try {
-            await peerConnection.addIceCandidate(candidate);
-            console.log('Processed queued ICE candidate');
-        } catch (error) {
-            console.warn('Error adding queued ICE candidate:', error);
-        }
-    }
-}
 
 
 
