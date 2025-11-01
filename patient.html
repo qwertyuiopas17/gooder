@@ -1904,6 +1904,23 @@ async function triggerSos(user) {
         console.error('Failed to load prescriptions:', e);
         container.innerHTML = '<p>Failed to load prescriptions.</p>';
     }
+}// In patient.html, add this new function near your other 'generate' functions
+async function loadOrderHistory() {
+    if (!user || !user.patientId) return; // Don't run if not logged in
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/orders/history?userId=${user.patientId}`);
+        const data = await response.json();
+        if (data.success && data.orders) {
+            appData.orders = data.orders; // Populate the local array
+        } else {
+            appData.orders = []; // Clear any old data if fetch fails
+        }
+    } catch (error) {
+        console.error('Failed to load order history:', error);
+        appData.orders = []; // Clear on error
+    }
+    // Finally, render the list with the fetched (or empty) data
+    generateOrdersList();
 }
 
 
@@ -3966,6 +3983,12 @@ function displayMessage(message, sender) {
                         if (prescCard) {
                             const highlight = prescCard.querySelector('.highlight');
                             highlight.textContent = data.prescriptionCount + ' Total';
+                        // This populates the local records from the server
+            if (data.healthRecords) {
+                appData.records = data.healthRecords;
+                generateTimeline(); // NOW we render the timeline, *after* data is loaded
+            }
+            // --- END OF FIX ---
                         }
                     }
                 } catch (e) {
@@ -4618,12 +4641,13 @@ function displayMessage(message, sender) {
                 setupThemeAndLanguage();   // Setup theme/language toggles
 
                 // 5. Render Initial Screen Content (Depends on Core Data)
-                generateTimeline();        // Render health records timeline
+                       // Render health records timeline
                 await generateAppointments(); // Fetch and render appointments list (also updates homepage 'Next Appt')
                 await generateAllPrescriptions(); // Fetch and render prescriptions list
                 await loadDashboard();     // Fetch specific dashboard stats (like prescription count)
                 await loadChatHistory();   // Fetch past chat messages
-                generateOrdersList();      // Render past medicine orders list
+                // --- WITH THIS LINE ---
+await loadOrderHistory();  // Fetch and render past medicine orders    // Render past medicine orders list
                 loadAndDisplaySummary();   // Fetch latest prescription summary for chat
                 renderBookingStep(1);      // Setup the first step of the booking screen
 
