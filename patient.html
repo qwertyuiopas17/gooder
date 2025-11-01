@@ -4285,6 +4285,11 @@ function displayMessage(message, sender) {
                             ${data.reminders.map(reminder => `
                                 <div class="medicine-card card">
                                     <div class="medicine-name">${reminder.medicine_name}</div>
+                                    ${reminder.source === 'prescription_upload' ?
+            `<span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-bottom: 1rem; display: inline-block; font-weight: 500;">
+                Generated from Prescription
+            </span>`
+            : ''}
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
                                         <div>
                                             <strong>Dosage:</strong> ${reminder.dosage}<br>
@@ -4647,7 +4652,7 @@ function displayMessage(message, sender) {
                 await loadDashboard();     // Fetch specific dashboard stats (like prescription count)
                 await loadChatHistory();   // Fetch past chat messages
                 // --- WITH THIS LINE ---
-await loadOrderHistory();  // Fetch and render past medicine orders    // Render past medicine orders list
+                await loadOrderHistory();  // Fetch and render past medicine orders    // Render past medicine orders list
                 loadAndDisplaySummary();   // Fetch latest prescription summary for chat
                 renderBookingStep(1);      // Setup the first step of the booking screen
 
