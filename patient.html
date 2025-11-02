@@ -2233,8 +2233,11 @@ function showTrackingModal(orderId) {
         window.location.href = 'index.html'; // Redirect to your login page
     }, 1500); // Wait 1.5 seconds before redirecting
 });
-
-                document.getElementById('confirmSos').addEventListener('click', () => { document.getElementById('sosModal').classList.remove('active'); showConfirmationModal('SOS Activated', 'Emergency services have been notified.'); });
+// REPLACE the old 'confirmSos' listener with this:
+document.getElementById('confirmSos').addEventListener('click', () => { 
+    document.getElementById('sosModal').classList.remove('active'); 
+    startSosCountdown(user); // This correctly starts the countdown
+});
                 document.getElementById('reportIssueForm')?.addEventListener('submit', (e) => { e.preventDefault(); showConfirmationModal('Report Submitted', 'Your report has been sent for review.'); e.target.reset(); setTimeout(() => showScreen('moreScreen'), 2000); });
                 document.getElementById('prevMonth').addEventListener('click', () => { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } generateCalendar(); });
                 document.getElementById('nextMonth').addEventListener('click', () => { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } generateCalendar(); });
@@ -4740,7 +4743,6 @@ if (startCallButton) {
 } else {
     console.error("Could not find the Start Call button element!");
 }
-                document.getElementById('sosButton').addEventListener('click', () => { startSosCountdown(user); }); // Attach SOS listener
 
                 // 7. Perform Final Checks and UI Refreshes (Run AFTER main UI is rendered)
                 console.log("initializeApp: Performing final reminder check...");
