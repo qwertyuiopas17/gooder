@@ -1246,17 +1246,20 @@ function updateView(screenId) {
     });
 }
 
-            // Replace your old showScreen function with this
+// Replace your old showScreen function with this
 function showScreen(screenId) {
     updateView(screenId); // Update the UI
     
-    // Manually create the state
     const state = { screen: screenId };
-    const title = ''; // Title is ignored
     const url = '#' + screenId;
-    
-    // Push the new state onto the history stack
-    history.pushState(state, title, url);
+
+    if (screenId === 'dashboardScreen') {
+        // If navigating TO the dashboard, REPLACE the current history
+        history.replaceState(state, '', url);
+    } else {
+        // For any other screen, PUSH a new history state
+        history.pushState(state, '', url);
+    }
 }
             
             function setupNavigation() {
@@ -1892,15 +1895,14 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                 if(isAuthenticated){
                     setupNavigation();
                     // Replace your old popstate listener with this
+// Replace your old popstate listener with this
 window.addEventListener('popstate', (event) => {
     if (event.state && event.state.screen) {
         // State exists, so just update the view to match the state
         updateView(event.state.screen);
-    } else {
-        // This traps the user: if they try to go back to the login page,
-        // it just shows them the dashboard screen again.
-        updateView('dashboardScreen');
     }
+    // NO ELSE BLOCK. This allows the browser to go back to index.html
+    // when event.state is null.
 });
                     setupThemeAndLanguage();
                     
