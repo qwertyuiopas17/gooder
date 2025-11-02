@@ -731,10 +731,11 @@
     </div>
 
 <script>
-    (async () => {
-    // This runs as soon as the index.html script is parsed
-    const API_BASE_URL = '/api'; // Your API URL
     
+    document.addEventListener('DOMContentLoaded', async function() {
+        //const API_BASE_URL = 'https://sahara-sathi.onrender.com/v1';
+        const API_BASE_URL = '/api';
+        // --- ADD THIS NEW BLOCK ---
     try {
         // 1. Tell the server to destroy the session cookie
         await fetch(`${API_BASE_URL}/v1/logout`, { 
@@ -745,17 +746,14 @@
         // 2. Clear any client-side tokens
         localStorage.removeItem('sehatSaharaUser');
         localStorage.removeItem('sehatSaharaDoctor');
-        localStorage.removeItem('authToken'); // I see this in your login code
+        localStorage.removeItem('authToken');
 
         console.log('Session cleared on login page load.');
 
     } catch (error) {
         console.error('Error during auto-logout:', error);
     }
-})();
-    document.addEventListener('DOMContentLoaded', function() {
-        //const API_BASE_URL = 'https://sahara-sathi.onrender.com/v1';
-        const API_BASE_URL = '/api';
+    // --- END OF NEW BLOCK ---
         // --- DOM Elements ---
         const authModal = document.getElementById('authModal');
         const loginBtn = document.getElementById('loginBtn');
