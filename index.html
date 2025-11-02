@@ -732,11 +732,15 @@
 
 <script>
     
-    document.addEventListener('DOMContentLoaded', async function() {
+    document.addEventListener('DOMContentLoaded', function() {
         //const API_BASE_URL = 'https://sahara-sathi.onrender.com/v1';
         const API_BASE_URL = '/api';
-        // --- ADD THIS NEW BLOCK ---
+        // --- ADD THIS ENTIRE NEW BLOCK ---
+async function clearSessionOnPageShow() {
+    // We must define API_BASE_URL here because this is a separate scope
+    const API_BASE_URL = '/api'; 
     try {
+        console.log('Page is visible. Clearing session...');
         // 1. Tell the server to destroy the session cookie
         await fetch(`${API_BASE_URL}/v1/logout`, { 
             method: 'POST',
@@ -748,12 +752,17 @@
         localStorage.removeItem('sehatSaharaDoctor');
         localStorage.removeItem('authToken');
 
-        console.log('Session cleared on login page load.');
+        console.log('Session cleared successfully.');
 
     } catch (error) {
         console.error('Error during auto-logout:', error);
     }
-    // --- END OF NEW BLOCK ---
+}
+
+// This event fires EVERY time the page is shown,
+// including "back" button/gesture navigation.
+window.addEventListener('pageshow', clearSessionOnPageShow);
+// --- END OF NEW BLOCK ---
         // --- DOM Elements ---
         const authModal = document.getElementById('authModal');
         const loginBtn = document.getElementById('loginBtn');
