@@ -1722,12 +1722,27 @@ async function triggerSos(user) {
                     if (text) el.textContent = text;
                 });
             }
-            function showScreen(screenId) { 
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
-            document.getElementById(screenId)?.classList.add('active'); 
-            document.querySelectorAll('.nav-button, .top-nav a').forEach(link => { link.classList.toggle('active', link.dataset.screen === screenId); }); 
-            history.pushState({ screen: screenId }, '', '#' + screenId);
-            }
+            // Add this new function
+function updateView(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId)?.classList.add('active');
+    
+    document.querySelectorAll('.nav-button, .top-nav a').forEach(link => {
+        link.classList.toggle('active', link.dataset.screen === screenId);
+    });
+}
+            // Replace your old showScreen function with this
+function showScreen(screenId) {
+    updateView(screenId); // Update the UI
+    
+    // Manually create the state
+    const state = { screen: screenId };
+    const title = ''; // Title is ignored
+    const url = '#' + screenId;
+    
+    // Push the new state onto the history stack
+    history.pushState(state, title, url);
+}
             
             function showConfirmationModal(title, message) {
                 document.getElementById('modalTitle').textContent = title;
@@ -4656,15 +4671,17 @@ function displayMessage(message, sender) {
                 // 4. Setup Basic UI Elements (Theme, Language, Static Nav)
                 updateUIText();            // Apply initial language translations
                 setupNavigation();
-                // This is in doctor(12).html and patient(55).html
-// Add this snippet inside your initializeApp function
-
-// Add popstate listener for back button support
+  // Replace your old popstate listener with this
 window.addEventListener('popstate', (event) => {
     if (event.state && event.state.screen) {
-        showScreen(event.state.screen);
+        // State exists, so just update the view to match the state
+        updateView(event.state.screen);
+    } else {
+        // This traps the user: if they try to go back to the login page,
+        // it just shows them the home screen again.
+        updateView('homeScreen');
     }
-});         // Make nav buttons clickable
+});       // Make nav buttons clickable
                 setupThemeAndLanguage();   // Setup theme/language toggles
 
                 // 5. Render Initial Screen Content (Depends on Core Data)
@@ -4738,6 +4755,10 @@ if (startCallButton) {
                 }
 
                 console.log("initializeApp: Initialization complete.");
+                // Add these 3 lines at the VERY END of your initializeApp function
+const initialScreen = 'homeScreen';
+history.replaceState({ screen: initialScreen }, '', '#' + initialScreen);
+updateView(initialScreen); // Make sure the view matches this initial state
             }
 
             // Post-appointment follow-up check
