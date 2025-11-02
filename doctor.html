@@ -1244,6 +1244,8 @@ async function showPatientSummary(appointmentId) {
                 document.querySelectorAll('.nav-button, .top-nav a').forEach(link => {
                     link.classList.toggle('active', link.dataset.screen === screenId);
                 });
+                // Add this line
+            history.pushState({ screen: screenId }, '', '#' + screenId);
             }
             
             function setupNavigation() {
@@ -1878,6 +1880,15 @@ async function showPatientSummary(patientId, patientName) { // Changed parameter
                 const isAuthenticated = await checkAuth();
                 if(isAuthenticated){
                     setupNavigation();
+                    // This is in doctor(12).html and patient(55).html
+// Add this snippet inside your initializeApp function
+
+// Add popstate listener for back button support
+window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.screen) {
+        showScreen(event.state.screen);
+    }
+});
                     setupThemeAndLanguage();
                     
                     generateAppointments();

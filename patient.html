@@ -120,7 +120,15 @@
         .btn { padding: 0.6rem 1.2rem; border-radius: 9999px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.25s ease; }
         .btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.12); }
         .btn:disabled { background-color: #94a3b8; cursor: not-allowed; }
-        .btn-sos { background-color: var(--sos-color); color: white; }
+        .btn-sos { 
+    background-color: var(--sos-color); 
+    color: white; 
+    animation: pulse 2s infinite; 
+}
+.btn-sos:hover { 
+    animation: pulse 1s infinite; 
+    transform: scale(1.05); 
+}
         /* And add the animation properties to it like this: */
 .btn-sos { 
     background-color: var(--sos-color); 
@@ -1714,7 +1722,12 @@ async function triggerSos(user) {
                     if (text) el.textContent = text;
                 });
             }
-            function showScreen(screenId) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(screenId)?.classList.add('active'); document.querySelectorAll('.nav-button, .top-nav a').forEach(link => { link.classList.toggle('active', link.dataset.screen === screenId); }); }
+            function showScreen(screenId) { 
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
+            document.getElementById(screenId)?.classList.add('active'); 
+            document.querySelectorAll('.nav-button, .top-nav a').forEach(link => { link.classList.toggle('active', link.dataset.screen === screenId); }); 
+            history.pushState({ screen: screenId }, '', '#' + screenId);
+            }
             
             function showConfirmationModal(title, message) {
                 document.getElementById('modalTitle').textContent = title;
@@ -4642,7 +4655,16 @@ function displayMessage(message, sender) {
 
                 // 4. Setup Basic UI Elements (Theme, Language, Static Nav)
                 updateUIText();            // Apply initial language translations
-                setupNavigation();         // Make nav buttons clickable
+                setupNavigation();
+                // This is in doctor(12).html and patient(55).html
+// Add this snippet inside your initializeApp function
+
+// Add popstate listener for back button support
+window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.screen) {
+        showScreen(event.state.screen);
+    }
+});         // Make nav buttons clickable
                 setupThemeAndLanguage();   // Setup theme/language toggles
 
                 // 5. Render Initial Screen Content (Depends on Core Data)
