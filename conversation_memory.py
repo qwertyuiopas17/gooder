@@ -815,6 +815,12 @@ class ProgressiveConversationMemory:
             # Default if no time is found
             if not times:
                 times.append("09:00") # Default to a morning reminder
+            next_alert_utc = None
+            if times:
+                # We don't have the user's timezone here, so we'll default to UTC
+                # as a reliable standard for an automated feature.
+                user_timezone = "UTC" 
+                next_alert_utc = self._calculate_next_utc_timestamp(times, user_timezone)
 
             reminder = {
                 'medicine_name': med_name,
@@ -825,7 +831,8 @@ class ProgressiveConversationMemory:
                 'instructions': med.get('time', 'As directed by your doctor.'),
                 'source': 'prescription_upload', # To identify auto-generated reminders
                 'reminder_enabled': False, # User must manually enable it
-                'created_at': datetime.now().isoformat()
+                'created_at': datetime.now().isoformat(),
+                'next_alert_utc': next_alert_utc
             }
 
             profile.medicine_reminders.append(reminder)

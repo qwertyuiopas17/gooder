@@ -774,6 +774,13 @@ def manage_medicine_reminders():
     try:
         if not conversation_memory:
             return jsonify({"error": "Service unavailable."}), 503
+        # --- START OF FIX ---
+        try:
+            conversation_memory.load_from_file(os.path.join(models_path, 'conversation_memory.json'))
+            logger.info(f"Refreshed conversation memory from DB for /v1/medicine-reminders")
+        except Exception as load_e:
+            logger.error(f"Failed to refresh memory in medicine-reminders: {load_e}")
+        # --- END OF FIX ---
 
         data = request.get_json() or {}
         user_id = data.get("userId", "").strip()
@@ -1245,6 +1252,12 @@ def predict():
     try:
         start_time = time.time()
         update_system_state('predict')
+        # --- START OF FIX ---
+        try:
+            conversation_memory.load_from_file(os.path.join(models_path, 'conversation_memory.json'))
+        except Exception as load_e:
+            logger.error(f"Failed to refresh memory in /predict: {load_e}")
+        # --- END OF FIX ---
 
         data = request.get_json() or {}
         user_message = (data.get("message") or "").strip()
