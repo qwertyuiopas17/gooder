@@ -3499,6 +3499,8 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
             // --- 1. ADD THIS NEW UNIFIED RESPONSE HANDLER ---
             // --- REPLACE your entire setupChatbot function with this ---
 
+            // --- REPLACE your entire setupChatbot function with this CORRECTED version ---
+
             function setupChatbot() {
                 
                 const chatForm = document.getElementById('chatForm');
@@ -3510,7 +3512,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 let audioChunks = [];
                 let isRecording = false;
 
-                // --- 1. NEW MediaRecorder LOGIC (Replaces SpeechRecognition) ---
+                // --- 1. NEW MediaRecorder LOGIC ---
                 recordButton.addEventListener('click', () => {
                     if (isRecording) {
                         // --- STOP RECORDING ---
@@ -3523,14 +3525,17 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         // --- START RECORDING ---
                         navigator.mediaDevices.getUserMedia({ audio: true })
                             .then(stream => {
-                                // Bhashini is flexible, but 'audio/webm' is widely supported
-                                // Your Python backend can handle this format
                                 mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); 
                                 mediaRecorder.start();
                                 isRecording = true;
                                 audioChunks = []; // Clear old chunks
                                 recordButton.textContent = '...'; // Show "listening"
-                                recordButton.disabled = true; // Disable until stop
+                                
+                                // --- THIS IS THE FIX ---
+                                // The button MUST remain enabled so you can click it to stop.
+                                recordButton.disabled = false; 
+                                // --- END OF FIX ---
+
                                 chatInput.disabled = true;
 
                                 mediaRecorder.addEventListener("dataavailable", event => {
@@ -3562,7 +3567,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'recording.webm');
                     formData.append('userId', user.patientId);
-                    formData.append('language', currentLanguage); // <-- *** LINKS TO GLOBAL LANGUAGE ***
+                    formData.append('language', currentLanguage);
 
                     const typingIndicator = document.createElement('div');
                     typingIndicator.classList.add('chat-message', 'bot-message');
@@ -3573,7 +3578,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                     try {
                         const response = await fetch(`${API_BASE_URL}/v1/voice-input`, {
                             method: 'POST',
-                            body: formData // No Content-Type header needed, FormData handles it
+                            body: formData 
                         });
 
                         chatWindow.removeChild(typingIndicator);
@@ -3582,8 +3587,6 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         }
 
                         const data = await response.json();
-                        
-                        // Call the unified handler
                         handleBotResponse(data); 
 
                     } catch (error) {
@@ -3598,7 +3601,6 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 }
 
                 // --- 3. MODIFIED TEXT SUBMIT LISTENER ---
-                // (This is your original listener, just updated to call handleBotResponse)
                 chatForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const userInput = chatInput.value.trim();
@@ -3619,8 +3621,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         const sosCheck = await checkForEmergency(userInput);
                         if (sosCheck.emergency_detected) {
                             chatWindow.removeChild(typingIndicator);
-
-                            // Show SOS alert
+                            // (Your SOS UI logic here...)
                             const sosAlert = document.createElement('div');
                             sosAlert.className = 'sos-alert';
                             sosAlert.innerHTML = `
@@ -3629,14 +3630,11 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                                 <p><strong>Emergency Number: 108</strong></p>
                             `;
                             chatWindow.appendChild(sosAlert);
-
-                            // Auto-dial for critical emergencies
                             if (sosCheck.critical && sosCheck.parameters.auto_dial) {
                                 setTimeout(() => {
                                     window.location.href = `tel:${sosCheck.parameters.emergency_number}`;
                                 }, 3000);
                             }
-
                             chatWindow.scrollTop = chatWindow.scrollHeight;
                             chatInput.value = '';
                             return;
@@ -3649,7 +3647,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                             body: JSON.stringify({
                                 message: userInput,
                                 userId: user.patientId,
-                                language: currentLanguage // <-- *** LINKS TO GLOBAL LANGUAGE ***
+                                language: currentLanguage 
                             })
                         });
 
@@ -3658,8 +3656,6 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         }
 
                         const data = await response.json();
-                        
-                        // Call the unified handler
                         handleBotResponse(data);
 
                     } catch (error) {
@@ -3668,30 +3664,8 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         addMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
                     }
                 });
-
-                // --- 4. NEW UNIFIED RESPONSE HANDLER ---
-                function handleBotResponse(data) {
-                    // This function is called by BOTH text and voice inputs
-                    
-                    // Check if the backend sent audio data
-                    if (data.audioData) {
-                        // Play the Bhashini audio
-                        const audio = new Audio('data:audio/wav;base64,' + data.audioData);
-                        audio.play().catch(e => console.error("Audio play failed:", e));
-                    }
-                    
-                    // Remove "Processing..." message if it exists
-                    const userMessages = chatWindow.querySelectorAll('.user-message');
-                    const lastUserMessage = userMessages[userMessages.length - 1];
-                    if (lastUserMessage && lastUserMessage.textContent.includes("... (Processing voice input) ...")) {
-                        lastUserMessage.remove(); 
-                    }
-
-                    // Display the (translated) text response
-                    enhancedChatbot.handleChatbotResponse(data);
-                }
                 
-                // --- 5. Your existing initial messages ---
+                // --- 4. Your existing initial messages ---
                 addMessage("Welcome to Enhanced Sehat Sahara! I can help with appointments, prescriptions, medicine reminders, and health guidance.", "bot");
                 checkMedicineReminders();
                 testPrescriptionEndpoint();
