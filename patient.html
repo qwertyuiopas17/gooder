@@ -3496,10 +3496,27 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 chatWindow.appendChild(msgEl);
                 chatWindow.scrollTop = chatWindow.scrollHeight;
             };
-            // --- 1. ADD THIS NEW UNIFIED RESPONSE HANDLER ---
-            // --- REPLACE your entire setupChatbot function with this ---
+            
+            function handleBotResponse(data) {
+                // This function is called by BOTH text and voice inputs
+                
+                // Check if the backend sent audio data
+                if (data.audioData) {
+                    // Play the Bhashini audio
+                    const audio = new Audio('data:audio/wav;base64,' + data.audioData);
+                    audio.play().catch(e => console.error("Audio play failed:", e));
+                }
+                
+                // Remove "Processing..." message if it exists
+                const userMessages = chatWindow.querySelectorAll('.user-message');
+                const lastUserMessage = userMessages[userMessages.length - 1];
+                if (lastUserMessage && lastUserMessage.textContent.includes("... (Processing voice input) ...")) {
+                    lastUserMessage.remove(); 
+                }
 
-            // --- REPLACE your entire setupChatbot function with this CORRECTED version ---
+                // Display the (translated) text response
+                enhancedChatbot.handleChatbotResponse(data);
+            }
 
             function setupChatbot() {
                 
