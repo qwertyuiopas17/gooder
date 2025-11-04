@@ -1617,7 +1617,12 @@ async function triggerSos(user) {
         let medicineCart = [], selectedPharmacy = null;
 
         document.addEventListener('DOMContentLoaded', async function() {
-            let user = null, currentLanguage = 'en', bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
+            // --- REPLACE this line: let user = null, currentLanguage = 'en', ...
+            let user = null, bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
+            
+            // --- ADD THIS BLOCK to load the saved language ---
+            let currentLanguage = localStorage.getItem('userLanguage') || 'en'; // Load saved lang, default to 'en'
+            // --- END ADD ---
 
             const translations = {
                 en: { welcome_message: "Welcome, {name}", welcome_subtitle: "Your health dashboard is ready.", next_appointment: "Next Appointment", new_prescriptions: "New Prescriptions", from_last_visit: "From past visits", home_nav: "Home", appointments_nav: "Appointments", records_nav: "Records", book_nav: "Book", more_nav: "More", appointments_title: "My Appointments", records_title: "Digital Health Record", book_title: "Book a Consultation", more_title: "More Options", prescriptions_title: "My Prescriptions", scan_medicine: "Scan Medicine", book_medicine: "Book Medicine", health_chatbot: "Health Chatbot", scan_medicine_title: "Scan Medicine", book_medicine_title: "Book Medicine", health_chatbot_title: "Health Assistant", select_pharmacy: "Select a Pharmacy"},
@@ -1669,7 +1674,7 @@ async function triggerSos(user) {
             const response = await fetch(`${API_BASE_URL}/v1/history`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.patientId, limit: 50 })
+                body: JSON.stringify({ userId: user.patientId, limit: 50, language: currentLanguage })
             });
             const data = await response.json();
             if (data.success && data.history) {
@@ -1836,7 +1841,7 @@ function showScreen(screenId) {
                 Object.keys(translations).forEach(lang => { const option = document.createElement('a'); option.href = "#"; option.className = 'language-option'; option.dataset.lang = lang; option.textContent = new Intl.DisplayNames([lang], { type: 'language' }).of(lang); langMenu.appendChild(option); });
                 langDropdown.querySelector('.language-dropdown-toggle').addEventListener('click', () => langDropdown.classList.toggle('open'));
                 document.addEventListener('click', e => { if (!langDropdown.contains(e.target)) langDropdown.classList.remove('open'); });
-                langMenu.addEventListener('click', e => { if (e.target.classList.contains('language-option')) { currentLanguage = e.target.dataset.lang; document.getElementById('selectedLanguage').textContent = e.target.textContent; updateUIText(); langDropdown.classList.remove('open'); } });
+                langMenu.addEventListener('click', e => { if (e.target.classList.contains('language-option')) { currentLanguage = e.target.dataset.lang; document.getElementById('selectedLanguage').textContent = e.target.textContent; localStorage.setItem('userLanguage', currentLanguage); updateUIText(); langDropdown.classList.remove('open'); } });
             }
 
             function generateTimeline() { document.getElementById('timeline-container').innerHTML = appData.records.map(rec => `<div class="timeline-item"><div class="timeline-dot"></div><p class="timeline-date">${new Date(rec.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</p><div class="card"><h4>${rec.title}</h4><p>${rec.description}</p></div></div>`).join(''); }
@@ -3511,7 +3516,13 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 const userMessages = chatWindow.querySelectorAll('.user-message');
                 const lastUserMessage = userMessages[userMessages.length - 1];
                 if (lastUserMessage && lastUserMessage.textContent.includes("... (Processing voice input) ...")) {
-                    lastUserMessage.remove(); 
+                    if (data.transcribed_text) {
+                        // If we got the transcription, replace the text
+                        lastUserMessage.textContent = data.transcribed_text;
+                    } else {
+                        // Otherwise, just remove it (fallback)
+                        lastUserMessage.remove(); 
+                    }
                 }
 
                 // Display the (translated) text response
@@ -4822,7 +4833,12 @@ window.addEventListener('popstate', (event) => {
     // NO ELSE BLOCK. This allows the browser to go back to index.html
     // when event.state is null.
 });       // Make nav buttons clickable
-                setupThemeAndLanguage();   // Setup theme/language toggles
+                setupThemeAndLanguage();  
+                // --- ADD THIS BLOCK TO SET THE DROPDOWN TEXT ON LOAD ---
+                const initialLangText = document.querySelector(`.language-option[data-lang="${currentLanguage}"]`);
+                if (initialLangText) {
+                    document.getElementById('selectedLanguage').textContent = initialLangText.textContent;
+                } // Setup theme/language toggles
 
                 // 5. Render Initial Screen Content (Depends on Core Data)
                        // Render health records timeline
