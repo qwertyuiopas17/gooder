@@ -3561,6 +3561,7 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 });
                 
                 // --- 2. NEW FUNCTION TO SEND VOICE TO BACKEND ---
+                // --- 2. REPLACE your old 'sendVoiceToBackend' function with this ---
                 async function sendVoiceToBackend(audioBlob) {
                     addMessage("... (Processing voice input) ...", 'user');
 
@@ -3581,19 +3582,24 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                             body: formData 
                         });
 
-                        chatWindow.removeChild(typingIndicator);
                         if (!response.ok) {
-                            throw new Error(`HTTP Error: ${response.status}`);
+                            // This will be caught by the catch block below
+                            throw new Error(`HTTP Error: ${response.status}`); 
                         }
 
                         const data = await response.json();
                         handleBotResponse(data); 
 
                     } catch (error) {
-                        console.error('Voice Chat Error:', error);
-                        chatWindow.removeChild(typingIndicator);
+                        console.error('Voice Chat Error:', error); // This is line 3593
                         addMessage("I'm sorry, I couldn't process your voice. Please try again.", 'bot');
+                    
                     } finally {
+                        // This 'finally' block runs *no matter what* (after try OR catch)
+                        // This fixes your 'removeChild' bug.
+                        if (chatWindow.contains(typingIndicator)) {
+                            chatWindow.removeChild(typingIndicator); // This removes the indicator
+                        }
                         // Re-enable buttons after processing
                         recordButton.disabled = false;
                         chatInput.disabled = false;
