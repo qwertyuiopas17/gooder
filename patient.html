@@ -700,6 +700,52 @@
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
+/* New Gradient & Modal Styles */
+        .modal-gradient-unique {
+            /* Unique Teal-to-Blue gradient matching your site's primary color */
+            background: linear-gradient(135deg, #0d9488, #14b8a6, #2dd4bf);
+            border: 1px solid #2dd4bf;
+        }
+
+        #missedReminderList .reminder-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column; /* Stack info and actions */
+            gap: 0.75rem;
+        }
+
+        #missedReminderList .reminder-info strong {
+            font-size: 1.1rem;
+        }
+
+        #missedReminderList .reminder-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Button styles for the new modal */
+        #missedReminderList .btn-taken {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        #missedReminderList .btn-skip {
+            background-color: #ffc107;
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
 
 @media (max-width: 768px) {
     .form-row {
@@ -1152,7 +1198,19 @@
    </div>
    <div id="orders-list-container"></div>
 </section>
-
+<div id="missedReminderModal" class="modal">
+        <div class="modal-content modal-gradient-unique" style="color: white;">
+            <h3 id="missedReminderTitle" style="color: white;">⏰ Missed Reminders</h3>
+            <p>You didn't acknowledge the following medicine reminders:</p>
+            
+            <div id="missedReminderList" style="text-align: left; margin-top: 1.5rem; max-height: 200px; overflow-y: auto;">
+                </div>
+            
+            <div class="modal-actions" style="margin-top: 1.5rem;">
+                 <button class="btn" id="closeMissedReminderModal" style="background: rgba(255,255,255,0.2);">Close</button>
+            </div>
+        </div>
+    </div>
 <div id="cartModal" class="modal">
    <div class="modal-content" style="max-width: 600px; width: 90%;">
        <h3>🛒 Shopping Cart</h3>
@@ -3438,113 +3496,116 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 chatWindow.appendChild(msgEl);
                 chatWindow.scrollTop = chatWindow.scrollHeight;
             };
-            // --- FIX END ---
+            // --- 1. ADD THIS NEW UNIFIED RESPONSE HANDLER ---
+            // --- REPLACE your entire setupChatbot function with this ---
 
             function setupChatbot() {
                 
                 const chatForm = document.getElementById('chatForm');
                 const chatInput = document.getElementById('chatInput');
-                const chatWindow = document.getElementById('chatWindow'); // Make sure chatWindow is defined here
+                const chatWindow = document.getElementById('chatWindow');
+                const recordButton = document.getElementById('record-button');
                 
-                // --- START: Speech-to-Text code ---
-const recordButton = document.getElementById('record-button');
+                let mediaRecorder;
+                let audioChunks = [];
+                let isRecording = false;
 
-// Check if the browser supports the Web Speech API
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                // --- 1. NEW MediaRecorder LOGIC (Replaces SpeechRecognition) ---
+                recordButton.addEventListener('click', () => {
+                    if (isRecording) {
+                        // --- STOP RECORDING ---
+                        mediaRecorder.stop();
+                        isRecording = false;
+                        recordButton.textContent = '🎤';
+                        recordButton.disabled = false;
+                        chatInput.disabled = false;
+                    } else {
+                        // --- START RECORDING ---
+                        navigator.mediaDevices.getUserMedia({ audio: true })
+                            .then(stream => {
+                                // Bhashini is flexible, but 'audio/webm' is widely supported
+                                // Your Python backend can handle this format
+                                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); 
+                                mediaRecorder.start();
+                                isRecording = true;
+                                audioChunks = []; // Clear old chunks
+                                recordButton.textContent = '...'; // Show "listening"
+                                recordButton.disabled = true; // Disable until stop
+                                chatInput.disabled = true;
 
-if (SpeechRecognition) {
-    const recognition = new SpeechRecognition();
+                                mediaRecorder.addEventListener("dataavailable", event => {
+                                    audioChunks.push(event.data);
+                                });
 
-    // Use the app's current language (assuming 'currentLanguage' is accessible)
-    recognition.lang = currentLanguage || 'en-US'; // Default to English if not set
-    recognition.interimResults = false; // We only want final results
-    recognition.continuous = false; // Stop listening after first utterance
+                                mediaRecorder.addEventListener("stop", () => {
+                                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                                    sendVoiceToBackend(audioBlob);
+                                    
+                                    // Stop all audio tracks to turn off mic light
+                                    stream.getTracks().forEach(track => track.stop());
+                                });
+                            })
+                            .catch(err => {
+                                console.error("Microphone error:", err);
+                                alert("Microphone access denied. Please allow microphone access in your browser settings.");
+                                recordButton.textContent = '🎤';
+                                recordButton.disabled = false;
+                                chatInput.disabled = false;
+                            });
+                    }
+                });
+                
+                // --- 2. NEW FUNCTION TO SEND VOICE TO BACKEND ---
+                async function sendVoiceToBackend(audioBlob) {
+                    addMessage("... (Processing voice input) ...", 'user');
 
-    recordButton.addEventListener('click', () => {
-        console.log("Recording started...");
-        recordButton.textContent = '...'; // Show a "listening" state
-        recordButton.disabled = true;
-        try {
-            // Ensure recognition is not already running
-            recognition.stop(); // Stop any previous instance just in case
-            recognition.start();
-        } catch (e) {
-            console.error("Error starting recognition (maybe already running, or stopped prematurely):", e);
-            // If start() fails immediately, reset the button
-            recordButton.textContent = '🎤';
-            recordButton.disabled = false;
-        }
-    });
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'recording.webm');
+                    formData.append('userId', user.patientId);
+                    formData.append('language', currentLanguage); // <-- *** LINKS TO GLOBAL LANGUAGE ***
 
-    // This event fires when speech is recognized
-    recognition.onresult = (event) => {
-        const spokenText = event.results[0][0].transcript;
-        console.log("User said:", spokenText);
-        chatInput.value = spokenText; // Put the text in the chat box
+                    const typingIndicator = document.createElement('div');
+                    typingIndicator.classList.add('chat-message', 'bot-message');
+                    typingIndicator.textContent = 'Thinking...';
+                    chatWindow.appendChild(typingIndicator);
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
 
-        // --- Optional: Automatically send the message ---
-        // Uncomment the line below to send the message immediately after speech is recognized
-        // chatForm.dispatchEvent(new Event('submit'));
-    };
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/v1/voice-input`, {
+                            method: 'POST',
+                            body: formData // No Content-Type header needed, FormData handles it
+                        });
 
-    // Handle end of speech processing
-    recognition.onend = () => {
-        console.log("Recognition ended.");
-        recordButton.textContent = '🎤'; // Reset button icon
-        recordButton.disabled = false;
-    };
+                        chatWindow.removeChild(typingIndicator);
+                        if (!response.ok) {
+                            throw new Error(`HTTP Error: ${response.status}`);
+                        }
 
-    // Handle errors during recognition
-    recognition.onerror = (event) => {
-        console.error("Speech recognition error:", event.error);
-        recordButton.textContent = '🎤'; // Reset button on error
-        recordButton.disabled = false;
+                        const data = await response.json();
+                        
+                        // Call the unified handler
+                        handleBotResponse(data); 
 
-        // Provide specific user feedback based on the error type
-        switch(event.error) {
-            case 'no-speech':
-                console.warn("No speech detected.");
-                // Optionally show a small message to the user
-                break;
-            case 'audio-capture':
-                alert("Could not capture audio. Please ensure your microphone is working and allowed.");
-                break;
-            case 'not-allowed':
-                alert("Microphone access denied. Please allow microphone access in your browser settings to use this feature.");
-                break;
-            case 'network':
-                console.error("Network error during speech recognition. Check internet connection.");
-                // Optionally inform the user about network issues
-                break;
-            case 'aborted':
-                console.log("Speech recognition aborted."); // Usually happens if stop() is called early or by user action
-                break;
-            default:
-                alert(`An unknown speech error occurred: ${event.error}`);
-        }
-    };
+                    } catch (error) {
+                        console.error('Voice Chat Error:', error);
+                        chatWindow.removeChild(typingIndicator);
+                        addMessage("I'm sorry, I couldn't process your voice. Please try again.", 'bot');
+                    } finally {
+                        // Re-enable buttons after processing
+                        recordButton.disabled = false;
+                        chatInput.disabled = false;
+                    }
+                }
 
-} else {
-    // Browser doesn't support the API
-    console.log("Speech recognition not supported in this browser.");
-    if(recordButton) { // Check if the button exists before trying to hide it
-       recordButton.style.display = 'none'; // Hide the button if not supported
-    }
-}
-// --- END: Speech-to-Text code ---
-
-
-                // This is your FULL original event listener, now it works correctly.
+                // --- 3. MODIFIED TEXT SUBMIT LISTENER ---
+                // (This is your original listener, just updated to call handleBotResponse)
                 chatForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const userInput = chatInput.value.trim();
                     if (!userInput) return;
 
-                    // Store the last user message for contextual button generation
                     enhancedChatbot.lastUserMessage = userInput;
-
-                    console.log('Frontend: Sending message:', userInput, 'userId:', user.patientId);
-                    addMessage(userInput, 'user'); // This call now works
+                    addMessage(userInput, 'user');
                     chatInput.value = '';
 
                     const typingIndicator = document.createElement('div');
@@ -3581,14 +3642,14 @@ if (SpeechRecognition) {
                             return;
                         }
 
-                        // Your original predict call is preserved
+                        // Your original predict call, now with 'language' added
                         const response = await fetch(`${API_BASE_URL}/v1/predict`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 message: userInput,
                                 userId: user.patientId,
-                                language: currentLanguage
+                                language: currentLanguage // <-- *** LINKS TO GLOBAL LANGUAGE ***
                             })
                         });
 
@@ -3597,25 +3658,46 @@ if (SpeechRecognition) {
                         }
 
                         const data = await response.json();
-                        chatWindow.removeChild(typingIndicator);
-
-                        // Use enhanced chatbot handler
-                        await enhancedChatbot.handleChatbotResponse(data);
+                        
+                        // Call the unified handler
+                        handleBotResponse(data);
 
                     } catch (error) {
-                        console.error('Chat Error:', error);
+                        console.error('Text Chat Error:', error);
                         chatWindow.removeChild(typingIndicator);
                         addMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
                     }
                 });
 
-                // The rest of your function is also preserved
-                addMessage("Welcome to Enhanced Sehat Sahara! I can help with appointments, prescriptions, medicine reminders, and health guidance.", "bot");
+                // --- 4. NEW UNIFIED RESPONSE HANDLER ---
+                function handleBotResponse(data) {
+                    // This function is called by BOTH text and voice inputs
+                    
+                    // Check if the backend sent audio data
+                    if (data.audioData) {
+                        // Play the Bhashini audio
+                        const audio = new Audio('data:audio/wav;base64,' + data.audioData);
+                        audio.play().catch(e => console.error("Audio play failed:", e));
+                    }
+                    
+                    // Remove "Processing..." message if it exists
+                    const userMessages = chatWindow.querySelectorAll('.user-message');
+                    const lastUserMessage = userMessages[userMessages.length - 1];
+                    if (lastUserMessage && lastUserMessage.textContent.includes("... (Processing voice input) ...")) {
+                        lastUserMessage.remove(); 
+                    }
 
-                checkMedicineReminders();
+                    // Display the (translated) text response
+                    enhancedChatbot.handleChatbotResponse(data);
+                }
                 
+                // --- 5. Your existing initial messages ---
+                addMessage("Welcome to Enhanced Sehat Sahara! I can help with appointments, prescriptions, medicine reminders, and health guidance.", "bot");
+                checkMedicineReminders();
                 testPrescriptionEndpoint();
             }
+
+            
 
             
 // --- START: Agora Variables ---
@@ -4074,59 +4156,59 @@ function displayMessage(message, sender) {
     }
 
             function updateRemindersDisplay(reminders, alerts) {
-            // --- START: Add Detailed Logging ---
-            console.log("updateRemindersDisplay: Received reminders count:", reminders ? reminders.length : 'N/A'); // Log count received
-            console.log("updateRemindersDisplay: Received alerts count:", alerts ? alerts.length : 'N/A'); // Log count received
+                // (This logic for the homepage card remains the same)
+                console.log("updateRemindersDisplay: Received reminders count:", reminders ? reminders.length : 'N/A');
+                console.log("updateRemindersDisplay: Received alerts count:", alerts ? alerts.length : 'N/A');
 
-            const pendingEl = document.getElementById('pendingReminders');
-            console.log("updateRemindersDisplay: Found pendingEl:", pendingEl); // Log if the element was found
+                const pendingEl = document.getElementById('pendingReminders');
+                console.log("updateRemindersDisplay: Found pendingEl:", pendingEl);
 
-            if (pendingEl) {
-                const totalActiveReminders = reminders ? reminders.length : 0;
-                console.log("updateRemindersDisplay: Setting text content to:", `${totalActiveReminders} Total Active`); // Log the text being set
-                pendingEl.textContent = `${totalActiveReminders} Total Active`;
-                console.log("updateRemindersDisplay: Text content AFTER setting:", pendingEl.textContent); // Verify it was set
-            } else {
-                console.error("updateRemindersDisplay: Could not find element with ID 'pendingReminders'"); // Error if element is missing
+                if (pendingEl) {
+                    const totalActiveReminders = reminders ? reminders.length : 0;
+                    console.log("updateRemindersDisplay: Setting text content to:", `${totalActiveReminders} Total Active`);
+                    pendingEl.textContent = `${totalActiveReminders} Total Active`;
+                } else {
+                    console.error("updateRemindersDisplay: Could not find element with ID 'pendingReminders'");
+                }
+
+                // --- THIS IS THE MODIFICATION ---
+                // Instead of showing alerts in chat, show the popup modal.
+                if (alerts && alerts.length > 0) {
+                     console.log("updateRemindersDisplay: Showing missed reminder modal");
+                    showMissedReminderModal(alerts); // Call the new modal function
+                } else {
+                     console.log("updateRemindersDisplay: No pending alerts to show in modal.");
+                }
+                // --- END MODIFICATION ---
             }
-            // --- END: Add Detailed Logging ---
 
-            // Show alerts in chat if any (This part remains the same)
-            //if (alerts && alerts.length > 0 && document.getElementById('chatbotScreen').classList.contains('active')) {
-            if (alerts && alerts.length > 0) {
-                 console.log("updateRemindersDisplay: Showing alerts in chat"); // Log chat alert trigger
-                showMedicineAlerts(alerts);
-            } else {
-                 console.log("updateRemindersDisplay: Not showing alerts in chat (alerts:", alerts ? alerts.length : 'N/A', ", chatbot active:", document.getElementById('chatbotScreen').classList.contains('active'), ")");
-            }
-        }
+            // This new function shows the popup modal
+            function showMissedReminderModal(alerts) {
+                const modal = document.getElementById('missedReminderModal');
+                const listContainer = document.getElementById('missedReminderList');
+                if (!modal || !listContainer) return;
 
-            function showMedicineAlerts(alerts) {
-                const chatWindow = document.getElementById('chatWindow');
-                if (!chatWindow) return;
-
-                alerts.forEach(alert => {
-                    const alertDiv = document.createElement('div');
-                    const safeName = alert.medicine_name.replace(/[^a-zA-Z0-9]/g, '-');
-                    alertDiv.id = `alert-card-${safeName}`;
-                    alertDiv.className = 'medicine-reminder-card card';
-                    alertDiv.innerHTML = `
-                        <div class="reminder-item">
-                            <div class="reminder-info">
-                                <h4>⏰ Medicine Reminder</h4>
-                                <p><strong>${alert.medicine_name}</strong> - ${alert.dosage}</p>
-                                <p>Time: ${alert.time}</p>
-                            </div>
-                            <div class="reminder-actions">
-                                <button class="btn-taken" onclick="markMedicineTaken('${alert.medicine_name}')">Taken</button>
-                                <button class="btn-skip" onclick="skipMedicine('${alert.medicine_name}')">Skip</button>
-                            </div>
+                // Build the HTML for all missed reminders
+                listContainer.innerHTML = alerts.map(alert => `
+                    <div class="reminder-item" id="modal-alert-${alert.medicine_name.replace(/[^a-zA-Z0-9]/g, '-')}">
+                        <div class="reminder-info">
+                            <strong>${alert.medicine_name}</strong> (${alert.dosage})
+                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Scheduled for: ${alert.time}</p>
                         </div>
-                    `;
-                    chatWindow.appendChild(alertDiv);
-                });
+                        <div class="reminder-actions">
+                            <button class="btn-taken" onclick="markMedicineTaken('${alert.medicine_name}', true)">Mark as Taken</button>
+                            <button class="btn-skip" onclick="skipMedicine('${alert.medicine_name}', true)">Skip This Time</button>
+                        </div>
+                    </div>
+                `).join('');
 
-                chatWindow.scrollTop = chatWindow.scrollHeight;
+                // Add listener to the main close button
+                document.getElementById('closeMissedReminderModal').onclick = () => {
+                    modal.classList.remove('active');
+                };
+                
+                // Show the modal
+                modal.classList.add('active');
             }
 
             
@@ -4382,8 +4464,8 @@ function displayMessage(message, sender) {
             let currentlyEditing = null;
 
             // Make functions globally accessible for onclick attributes
-            window.markMedicineTaken = async function(medicineName) {
-                // ... (This function remains the same as before)
+            // Add a new parameter 'fromModal'
+            window.markMedicineTaken = async function(medicineName, fromModal = false) {
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
                         method: 'POST',
@@ -4395,16 +4477,28 @@ function displayMessage(message, sender) {
                             taken_time: new Date().toTimeString().slice(0, 5)
                         })
                     });
+
                     if (response.ok) {
-                        // --- START: THIS IS THE FIX YOU MISSED ---
-                        // Hide the card from the chat window
+                        // Hide the card from the chat window (if it's there)
                         const safeName = medicineName.replace(/[^a-zA-Z0-9]/g, '-');
-                        const card = document.getElementById(`alert-card-${safeName}`);
-                        if (card) {
-                            card.style.display = 'none';
+                        const chatCard = document.getElementById(`alert-card-${safeName}`);
+                        if (chatCard) chatCard.style.display = 'none';
+
+                        // --- START: NEW MODAL LOGIC ---
+                        if (fromModal) {
+                            // Hide just this item from the modal list
+                            const modalItem = document.getElementById(`modal-alert-${safeName}`);
+                            if (modalItem) modalItem.style.display = 'none';
+                            
+                            // Check if all items are hidden, if so, close the modal
+                            const modal = document.getElementById('missedReminderModal');
+                            if (modal.querySelectorAll('.reminder-item[style*="display: none"]').length === modal.querySelectorAll('.reminder-item').length) {
+                                modal.classList.remove('active');
+                            }
                         }
-                        // --- END: THIS IS THE FIX YOU MISSED ---
-                        await loadMedicineRemindersScreen();
+                        // --- END: NEW MODAL LOGIC ---
+
+                        await loadMedicineRemindersScreen(); // Refresh dedicated page
                         showConfirmationModal('Success', `${medicineName} marked as taken!`);
                     }
                 } catch (error) {
@@ -4413,7 +4507,8 @@ function displayMessage(message, sender) {
             }
 
             // --- ADD THIS ENTIRE NEW FUNCTION ---
-            window.skipMedicine = async function(medicineName) {
+            // Add a new parameter 'fromModal'
+            window.skipMedicine = async function(medicineName, fromModal = false) {
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
                         method: 'POST',
@@ -4426,13 +4521,25 @@ function displayMessage(message, sender) {
                     });
                     
                     if (response.ok) {
-                        // Hide the card from the chat window
+                        // Hide the card from the chat window (if it's there)
                         const safeName = medicineName.replace(/[^a-zA-Z0-9]/g, '-');
-                        const card = document.getElementById(`alert-card-${safeName}`);
-                        if (card) {
-                            card.style.display = 'none';
+                        const chatCard = document.getElementById(`alert-card-${safeName}`);
+                        if (chatCard) chatCard.style.display = 'none';
+
+                        // --- START: NEW MODAL LOGIC ---
+                        if (fromModal) {
+                            // Hide just this item from the modal list
+                            const modalItem = document.getElementById(`modal-alert-${safeName}`);
+                            if (modalItem) modalItem.style.display = 'none';
+
+                            // Check if all items are hidden, if so, close the modal
+                            const modal = document.getElementById('missedReminderModal');
+                            if (modal.querySelectorAll('.reminder-item[style*="display: none"]').length === modal.querySelectorAll('.reminder-item').length) {
+                                modal.classList.remove('active');
+                            }
                         }
-                        // We don't need to show a modal, it just disappears.
+                        // --- END: NEW MODAL LOGIC ---
+                        
                         console.log(`Skipped alert for ${medicineName}`);
                     } else {
                         showConfirmationModal('Error', 'Failed to skip reminder.');
@@ -4458,13 +4565,8 @@ function displayMessage(message, sender) {
                         })
                     });
                     if (response.ok) {
-                        const safeName = medicineName.replace(/[^a-zA-Z0-9]/g, '-');
-                        const card = document.getElementById(`alert-card-${safeName}`);
-                        if (card) {
-                            card.style.display = 'none';
-                        }
+                        showConfirmationModal('Reminder Deleted', `The reminder for ${medicineName} has been removed.`);
                         await loadMedicineRemindersScreen(); // Refresh the display
-                        showConfirmationModal('Success', `${medicineName} marked as taken!`);
                     }
                 } catch (error) {
                     console.error('Delete reminder error:', error);
@@ -4611,14 +4713,6 @@ function displayMessage(message, sender) {
 
         // 2. Check for *any* existing subscription in the browser
         let subscription = await navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription());
-
-        // --- CRITICAL FIX: Delete any existing subscription to ensure we get a clean one ---
-        if (subscription !== null) {
-            console.log('Existing subscription found. Unsubscribing to ensure clean re-registration...');
-            // This is the key line to clear the expired "address" from the browser
-            await subscription.unsubscribe(); 
-            subscription = null; 
-        }
         
         // At this point, 'subscription' is guaranteed to be null (or was never granted permission)
 
@@ -4835,63 +4929,7 @@ updateView(initialScreen); // Make sure the view matches this initial state
             }
 
             initializeApp();
-            // --- START: Text-to-Speech (TTS) Logic ---
-const chatWindowForTTS = document.getElementById('chatWindow');
 
-// Check if Speech Synthesis is supported
-if ('speechSynthesis' in window) {
-    const synth = window.speechSynthesis;
-    let currentUtterance = null; // To track the currently speaking utterance
-
-    // Use event delegation for dynamically added buttons
-    chatWindowForTTS.addEventListener('click', (event) => {
-        // Check if the clicked element is our speak button
-        if (event.target.classList.contains('speak-button')) {
-            const button = event.target;
-            const textToSpeak = button.dataset.textToSpeak; // Get text from dataset
-
-            if (textToSpeak) {
-                // If currently speaking, stop it first
-                if (synth.speaking && currentUtterance) {
-                    synth.cancel();
-                }
-
-                // Create a new utterance
-                const utterance = new SpeechSynthesisUtterance(textToSpeak);
-
-                // Optional: Configure voice, rate, pitch
-                utterance.lang = currentLanguage || 'en-US'; // Use the selected language
-                // utterance.rate = 1; // Speed (0.1 to 10)
-                // utterance.pitch = 1; // Pitch (0 to 2)
-
-                // Keep track of this utterance
-                currentUtterance = utterance;
-
-                // Handle the end of speech
-                utterance.onend = () => {
-                    console.log('Finished speaking.');
-                    currentUtterance = null;
-                };
-
-                // Handle errors
-                utterance.onerror = (e) => {
-                    console.error('Speech synthesis error:', e);
-                    currentUtterance = null;
-                };
-
-                // Speak the text
-                synth.speak(utterance);
-            }
-        }
-    });
-
-} else {
-    console.warn("Speech Synthesis (Text-to-Speech) is not supported in this browser.");
-    // Optionally hide all speak buttons if TTS is not supported
-    // This might require adding a class to hide them via CSS initially
-    // and only showing them if 'speechSynthesis' in window is true.
-}
-// --- END: Text-to-Speech (TTS) Logic ---
         });
     </script>
     <!-- Notification Banner for Push Reminders -->
