@@ -700,52 +700,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
-/* New Gradient & Modal Styles */
-        .modal-gradient-unique {
-            /* Unique Teal-to-Blue gradient matching your site's primary color */
-            background: linear-gradient(135deg, #0d9488, #14b8a6, #2dd4bf);
-            border: 1px solid #2dd4bf;
-        }
-
-        #missedReminderList .reminder-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column; /* Stack info and actions */
-            gap: 0.75rem;
-        }
-
-        #missedReminderList .reminder-info strong {
-            font-size: 1.1rem;
-        }
-
-        #missedReminderList .reminder-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        /* Button styles for the new modal */
-        #missedReminderList .btn-taken {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        #missedReminderList .btn-skip {
-            background-color: #ffc107;
-            color: #000;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
 
 @media (max-width: 768px) {
     .form-row {
@@ -866,22 +820,6 @@
             animation: pulse-loading 1.5s ease-in-out infinite;
             cursor: not-allowed;
         }
-        /* Mobile-specific styles for appointment cards */
-@media (max-width: 767px) {
-    .appointment-card-footer {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .appointment-card-footer > div {
-        display: flex;
-        gap: 0.75rem;
-        justify-content: center;
-    }
-    .appointment-card-footer .btn {
-        flex: 1;
-        text-align: center;
-    }
-}
 
         @keyframes pulse-loading {
             0% { opacity: 0.7; transform: scale(1); }
@@ -1214,19 +1152,7 @@
    </div>
    <div id="orders-list-container"></div>
 </section>
-<div id="missedReminderModal" class="modal">
-        <div class="modal-content modal-gradient-unique" style="color: white;">
-            <h3 id="missedReminderTitle" style="color: white;">⏰ Missed Reminders</h3>
-            <p>You didn't acknowledge the following medicine reminders:</p>
-            
-            <div id="missedReminderList" style="text-align: left; margin-top: 1.5rem; max-height: 200px; overflow-y: auto;">
-                </div>
-            
-            <div class="modal-actions" style="margin-top: 1.5rem;">
-                 <button class="btn" id="closeMissedReminderModal" style="background: rgba(255,255,255,0.2);">Close</button>
-            </div>
-        </div>
-    </div>
+
 <div id="cartModal" class="modal">
    <div class="modal-content" style="max-width: 600px; width: 90%;">
        <h3>🛒 Shopping Cart</h3>
@@ -1633,16 +1559,118 @@ async function triggerSos(user) {
         let medicineCart = [], selectedPharmacy = null;
 
         document.addEventListener('DOMContentLoaded', async function() {
-            // --- REPLACE this line: let user = null, currentLanguage = 'en', ...
-            let user = null, bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
-            
-            // --- ADD THIS BLOCK to load the saved language ---
-            let currentLanguage = localStorage.getItem('userLanguage') || 'en'; // Load saved lang, default to 'en'
-            // --- END ADD ---
+            let user = null, currentLanguage = 'en', bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
 
+            // --- REPLACE your old 'translations' object with this new one ---
             const translations = {
-                en: { welcome_message: "Welcome, {name}", welcome_subtitle: "Your health dashboard is ready.", next_appointment: "Next Appointment", new_prescriptions: "New Prescriptions", from_last_visit: "From past visits", home_nav: "Home", appointments_nav: "Appointments", records_nav: "Records", book_nav: "Book", more_nav: "More", appointments_title: "My Appointments", records_title: "Digital Health Record", book_title: "Book a Consultation", more_title: "More Options", prescriptions_title: "My Prescriptions", scan_medicine: "Scan Medicine", book_medicine: "Book Medicine", health_chatbot: "Health Chatbot", scan_medicine_title: "Scan Medicine", book_medicine_title: "Book Medicine", health_chatbot_title: "Health Assistant", select_pharmacy: "Select a Pharmacy"},
-                hi: { welcome_message: "नमस्ते, {name}", welcome_subtitle: "आपका स्वास्थ्य डैशबोर्ड तैयार है।", next_appointment: "अगली अपॉइंटमेंट", new_prescriptions: "नई दवाइयाँ", from_last_visit: "पिछली मुलाक़ात से", home_nav: "होम", appointments_nav: "अपॉइंटमेंट्स", records_nav: "रिकॉर्ड्स", book_nav: "बुक करें", more_nav: "और", appointments_title: "मेरी अपॉइंटमेंट्स", records_title: "डिजिटल स्वास्थ्य रिकॉर्ड", book_title: "परामर्श बुक करें", more_title: "अन्य विकल्प", prescriptions_title: "मेरे नुस्खे", scan_medicine: "दवा स्कैन करें", book_medicine: "दवा बुक करें", health_chatbot: "स्वास्थ्य चैटबॉट", scan_medicine_title: "दवा स्कैन करें", book_medicine_title: "दवा बुक करें", health_chatbot_title: "स्वास्थ्य सहायक", select_pharmacy: "एक फार्मेसी चुनें"}
+                en: {
+                    // Nav
+                    "home_nav": "Home",
+                    "appointments_nav": "Appointments",
+                    "records_nav": "Records",
+                    "book_nav": "Book",
+                    "more_nav": "More",
+                    // Home Screen
+                    "welcome_message": "Welcome, {name}",
+                    "welcome_subtitle": "Your health dashboard is ready.",
+                    "next_appointment": "Next Appointment",
+                    "new_prescriptions": "New Prescriptions",
+                    "from_last_visit": "From past visits",
+                    "scan_medicine": "Scan Medicine",
+                    "book_medicine": "Book Medicine",
+                    "health_chatbot": "Health Chatbot",
+                    // Page Titles
+                    "appointments_title": "My Appointments",
+                    "prescriptions_title": "My Prescriptions",
+                    "records_title": "Digital Health Record",
+                    "book_title": "Book a Consultation",
+                    "more_title": "More Options",
+                    "scan_medicine_title": "Scan Medicine",
+                    "book_medicine_title": "Book Medicine",
+                    "health_chatbot_title": "Health Assistant",
+                    "select_pharmacy": "Select a Pharmacy",
+                    // Booking Flow
+                    "book_step1": "1. Select a Category",
+                    "book_step2": "2. Select a Doctor",
+                    "book_step3": "3. Select Date & Time",
+                    "book_step4": "4. Select Consultation Mode",
+                    "book_prev": "Previous",
+                    // More Screen
+                    "report_issue": "Report an Issue",
+                    "logout": "Logout"
+                },
+                hi: {
+                    // Nav
+                    "home_nav": "होम",
+                    "appointments_nav": "अपॉइंटमेंट्स",
+                    "records_nav": "रिकॉर्ड्स",
+                    "book_nav": "बुक करें",
+                    "more_nav": "और",
+                    // Home Screen
+                    "welcome_message": "नमस्ते, {name}",
+                    "welcome_subtitle": "आपका स्वास्थ्य डैशबोर्ड तैयार है।",
+                    "next_appointment": "अगली अपॉइंटमेंट",
+                    "new_prescriptions": "नए नुस्खे",
+                    "from_last_visit": "पिछली मुलाक़ात से",
+                    "scan_medicine": "दवा स्कैन करें",
+                    "book_medicine": "दवा बुक करें",
+                    "health_chatbot": "स्वास्थ्य चैटबॉट",
+                    // Page Titles
+                    "appointments_title": "मेरी अपॉइंटमेंट्स",
+                    "prescriptions_title": "मेरे नुस्खे",
+                    "records_title": "डिजिटल स्वास्थ्य रिकॉर्ड",
+                    "book_title": "परामर्श बुक करें",
+                    "more_title": "अन्य विकल्प",
+                    "scan_medicine_title": "दवा स्कैन करें",
+                    "book_medicine_title": "दवा बुक करें",
+                    "health_chatbot_title": "स्वास्थ्य सहायक",
+                    "select_pharmacy": "एक फार्मेसी चुनें",
+                    // Booking Flow
+                    "book_step1": "१. श्रेणी चुनें",
+                    "book_step2": "२. डॉक्टर चुनें",
+                    "book_step3": "३. तारीख और समय चुनें",
+                    "book_step4": "४. परामर्श मोड चुनें",
+                    "book_prev": "पिछला",
+                    // More Screen
+                    "report_issue": "समस्या की रिपोर्ट करें",
+                    "logout": "लॉग आउट"
+                },
+                pa: {
+                    // Nav
+                    "home_nav": "ਹੋਮ",
+                    "appointments_nav": "ਅਪॉइंटमेंट्स",
+                    "records_nav": "ਰਿਕਾਰਡ",
+                    "book_nav": "ਬੁੱਕ ਕਰੋ",
+                    "more_nav": "ਹੋਰ",
+                    // Home Screen
+                    "welcome_message": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ, {name}",
+                    "welcome_subtitle": "ਤੁਹਾਡਾ ਸਿਹਤ ਡੈਸ਼ਬੋਰਡ ਤਿਆਰ ਹੈ।",
+                    "next_appointment": "ਅਗਲੀ ਅਪॉइंटमेंट",
+                    "new_prescriptions": "ਨਵੇਂ ਨੁਸਖੇ",
+                    "from_last_visit": "ਪਿਛਲੀ ਮੁਲਾਕਾਤ ਤੋਂ",
+                    "scan_medicine": "ਦਵਾਈ ਸਕੈਨ ਕਰੋ",
+                    "book_medicine": "ਦਵਾਈ ਬੁੱਕ ਕਰੋ",
+                    "health_chatbot": "ਸਿਹਤ ਚੈਟਬੋਟ",
+                    // Page Titles
+                    "appointments_title": "ਮੇਰੀਆਂ ਅਪॉइंटमेंट्स",
+                    "prescriptions_title": "ਮੇਰੇ ਨੁਸਖੇ",
+                    "records_title": "ਡਿਜੀਟਲ ਸਿਹਤ ਰਿਕਾਰਡ",
+                    "book_title": "ਸਲਾਹ-ਮਸ਼ਵਰਾ ਬੁੱਕ ਕਰੋ",
+                    "more_title": "ਹੋਰ ਵਿਕਲਪ",
+                    "scan_medicine_title": "ਦਵਾਈ ਸਕੈਨ ਕਰੋ",
+                    "book_medicine_title": "ਦਵਾਈ ਬੁੱਕ ਕਰੋ",
+                    "health_chatbot_title": "ਸਿਹਤ ਸਹਾਇਕ",
+                    "select_pharmacy": "ਇੱਕ ਫਾਰਮੇਸੀ ਚੁਣੋ",
+                    // Booking Flow
+                    "book_step1": "੧. ਸ਼੍ਰੇਣੀ ਚੁਣੋ",
+                    "book_step2": "੨. ਡਾਕਟਰ ਚੁਣੋ",
+                    "book_step3": "੩. ਮਿਤੀ ਅਤੇ ਸਮਾਂ ਚੁਣੋ",
+                    "book_step4": "੪. ਸਲਾਹ-ਮਸ਼ਵਰਾ ਮੋਡ ਚੁਣੋ",
+                    "book_prev": "ਪਿਛਲਾ",
+                    // More Screen
+                    "report_issue": "ਸਮੱਸਿਆ ਦੀ ਰਿਪੋਰਟ ਕਰੋ",
+                    "logout": "ਲੌਗ ਆਉਟ"
+                }
             };
 
             const appData = {
@@ -1690,7 +1718,7 @@ async function triggerSos(user) {
             const response = await fetch(`${API_BASE_URL}/v1/history`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.patientId, limit: 50, language: currentLanguage })
+                body: JSON.stringify({ userId: user.patientId, limit: 50 })
             });
             const data = await response.json();
             if (data.success && data.history) {
@@ -1857,7 +1885,7 @@ function showScreen(screenId) {
                 Object.keys(translations).forEach(lang => { const option = document.createElement('a'); option.href = "#"; option.className = 'language-option'; option.dataset.lang = lang; option.textContent = new Intl.DisplayNames([lang], { type: 'language' }).of(lang); langMenu.appendChild(option); });
                 langDropdown.querySelector('.language-dropdown-toggle').addEventListener('click', () => langDropdown.classList.toggle('open'));
                 document.addEventListener('click', e => { if (!langDropdown.contains(e.target)) langDropdown.classList.remove('open'); });
-                langMenu.addEventListener('click', e => { if (e.target.classList.contains('language-option')) { currentLanguage = e.target.dataset.lang; document.getElementById('selectedLanguage').textContent = e.target.textContent; localStorage.setItem('userLanguage', currentLanguage); updateUIText(); langDropdown.classList.remove('open'); } });
+                langMenu.addEventListener('click', e => { if (e.target.classList.contains('language-option')) { currentLanguage = e.target.dataset.lang; document.getElementById('selectedLanguage').textContent = e.target.textContent; updateUIText(); langDropdown.classList.remove('open'); } });
             }
 
             function generateTimeline() { document.getElementById('timeline-container').innerHTML = appData.records.map(rec => `<div class="timeline-item"><div class="timeline-dot"></div><p class="timeline-date">${new Date(rec.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</p><div class="card"><h4>${rec.title}</h4><p>${rec.description}</p></div></div>`).join(''); }
@@ -1943,14 +1971,10 @@ function showScreen(screenId) {
                             <span class="appointment-card-tag tag-video">Demo</span>
                         </div>
                         <div class="appointment-card-footer">
-    <div style="display: flex; gap: 0.75rem;">
-        <button class="btn call-doctor-btn">Call Doctor</button>
-        <button class="btn message-doctor-btn">Message Doctor</button>
-    </div>
-    <button class="btn btn-primary join-call-btn" data-doctor="Demo Doctor" data-appointment-id="demo-call-123">
-        Join Call Now
-    </button>
-</div>
+                            <button class="btn btn-primary join-call-btn" data-doctor="Demo Doctor" data-appointment-id="demo-call-123">
+                                Join Call Now
+                            </button>
+                        </div>
                     </div>
                 `;
                 // --- END OF NEW CODE ---
@@ -1958,7 +1982,7 @@ function showScreen(screenId) {
                 let html = `<h3 class="appointments-section-title">Upcoming</h3>`;
                 html += demoCallHtml; // Add the demo call to the top of the list
             
-                html += upcoming.length ? upcoming.map(a => { const apptTime = new Date(`${a.date} ${a.time}`); const timeDiffMinutes = (apptTime - now) / 60000; const canJoin = timeDiffMinutes <= 10 && timeDiffMinutes >= -15; return `<div class="card appointment-card"><div class="appointment-card-header"><div class="appointment-card-doctor"><h4>${a.doctor}</h4><p>${a.type}</p><p>${new Date(a.date).toDateString()}, ${a.time}</p></div><span class="appointment-card-tag ${a.mode === 'Video' ? 'tag-video' : 'tag-audio'}">${a.mode}</span></div><div class="appointment-card-footer"><div style="display: flex; gap: 0.75rem;"><button class="btn call-doctor-btn">Call Doctor</button><button class="btn message-doctor-btn">Message Doctor</button></div><div style="display: flex; gap: 0.75rem;"><button class="btn" style="background: var(--color-secondary); color: var(--text-color);">Reschedule</button><button class="btn btn-primary join-call-btn" data-doctor="${a.doctor}" data-appointment-id="${a.id}" ${canJoin ? '' : 'disabled'}>Join Call</button></div></div></div>`; }).join('') : '<p>No upcoming appointments.</p>';
+                html += upcoming.length ? upcoming.map(a => { const apptTime = new Date(`${a.date} ${a.time}`); const timeDiffMinutes = (apptTime - now) / 60000; const canJoin = timeDiffMinutes <= 10 && timeDiffMinutes >= -15; return `<div class="card appointment-card"><div class="appointment-card-header"><div class="appointment-card-doctor"><h4>${a.doctor}</h4><p>${a.type}</p><p>${new Date(a.date).toDateString()}, ${a.time}</p></div><span class="appointment-card-tag ${a.mode === 'Video' ? 'tag-video' : 'tag-audio'}">${a.mode}</span></div><div class="appointment-card-footer"><button class="btn" style="background: var(--color-secondary); color: var(--text-color);">Reschedule</button><button class="btn btn-primary join-call-btn" data-doctor="${a.doctor}" data-appointment-id="${a.id}" ${canJoin ? '' : 'disabled'}>Join Call</button></div></div>`; }).join('') : '<p>No upcoming appointments.</p>';
                 
                 html += `<h3 class="appointments-section-title" style="margin-top: 2rem;">Past</h3>`;
                 html += past.length ? past.map((a, index) => `<div class="card appointment-card"><div class="appointment-card-header"><div class="appointment-card-doctor"><h4>${a.doctor}</h4><p>${a.type}</p><p>${new Date(a.date).toDateString()}, ${a.time}</p></div><span class="appointment-card-tag ${a.mode === 'Video' ? 'tag-video' : 'tag-audio'}">${a.mode}</span></div><div class="appointment-card-footer">${a.prescription ? `<button class="btn btn-primary view-prescription-btn" data-past-index="${index}">View Prescription</button>` : ''}</div></div>`).join('') : '<p>No past appointments.</p>';
@@ -1966,26 +1990,6 @@ function showScreen(screenId) {
                 container.innerHTML = html;
                 container.querySelectorAll('.join-call-btn').forEach(btn => btn.addEventListener('click', (e) => showCallScreen(e.currentTarget.dataset.doctor, e.currentTarget.dataset.appointmentId)));
                 container.querySelectorAll('.view-prescription-btn').forEach(btn => btn.addEventListener('click', (e) => showPrescription(past[e.currentTarget.dataset.pastIndex])));
-            // ... existing event listeners for join-call-btn and view-prescription-btn
-
-container.querySelectorAll('.call-doctor-btn').forEach(btn => btn.addEventListener('click', () => {
-    const phoneNumber = '7003665342';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-        window.location.href = `tel:${phoneNumber}`;
-    } else {
-        window.open(`https://web.whatsapp.com/send?phone=${phoneNumber}`, '_blank');
-    }
-}));
-container.querySelectorAll('.message-doctor-btn').forEach(btn => btn.addEventListener('click', () => {
-    const phoneNumber = '7003665342';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-        window.location.href = `sms:${phoneNumber}`;
-    } else {
-        window.open(`https://web.whatsapp.com/send?phone=${phoneNumber}`, '_blank');
-    }
-}));
             }
             
              async function generateAllPrescriptions() {
@@ -3541,147 +3545,113 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                 chatWindow.appendChild(msgEl);
                 chatWindow.scrollTop = chatWindow.scrollHeight;
             };
-            
-            function handleBotResponse(data) {
-                // This function is called by BOTH text and voice inputs
-                
-                // Check if the backend sent audio data
-                if (data.audioData) {
-                    // Play the Bhashini audio
-                    const audio = new Audio('data:audio/wav;base64,' + data.audioData);
-                    audio.play().catch(e => console.error("Audio play failed:", e));
-                }
-                
-                // Remove "Processing..." message if it exists
-                const userMessages = chatWindow.querySelectorAll('.user-message');
-                const lastUserMessage = userMessages[userMessages.length - 1];
-                if (lastUserMessage && lastUserMessage.textContent.includes("... (Processing voice input) ...")) {
-                    if (data.transcribed_text) {
-                        // If we got the transcription, replace the text
-                        lastUserMessage.textContent = data.transcribed_text;
-                    } else {
-                        // Otherwise, just remove it (fallback)
-                        lastUserMessage.remove(); 
-                    }
-                }
-
-                // Display the (translated) text response
-                enhancedChatbot.handleChatbotResponse(data);
-            }
+            // --- FIX END ---
 
             function setupChatbot() {
                 
                 const chatForm = document.getElementById('chatForm');
                 const chatInput = document.getElementById('chatInput');
-                const chatWindow = document.getElementById('chatWindow');
-                const recordButton = document.getElementById('record-button');
+                const chatWindow = document.getElementById('chatWindow'); // Make sure chatWindow is defined here
                 
-                let mediaRecorder;
-                let audioChunks = [];
-                let isRecording = false;
+                // --- START: Speech-to-Text code ---
+const recordButton = document.getElementById('record-button');
 
-                // --- 1. NEW MediaRecorder LOGIC ---
-                recordButton.addEventListener('click', () => {
-                    if (isRecording) {
-                        // --- STOP RECORDING ---
-                        mediaRecorder.stop();
-                        isRecording = false;
-                        recordButton.textContent = '🎤';
-                        recordButton.disabled = false;
-                        chatInput.disabled = false;
-                    } else {
-                        // --- START RECORDING ---
-                        navigator.mediaDevices.getUserMedia({ audio: true })
-                            .then(stream => {
-                                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); 
-                                mediaRecorder.start();
-                                isRecording = true;
-                                audioChunks = []; // Clear old chunks
-                                recordButton.textContent = '...'; // Show "listening"
-                                
-                                // --- THIS IS THE FIX ---
-                                // The button MUST remain enabled so you can click it to stop.
-                                recordButton.disabled = false; 
-                                // --- END OF FIX ---
+// Check if the browser supports the Web Speech API
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-                                chatInput.disabled = true;
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
 
-                                mediaRecorder.addEventListener("dataavailable", event => {
-                                    audioChunks.push(event.data);
-                                });
+    // Use the app's current language (assuming 'currentLanguage' is accessible)
+    recognition.lang = currentLanguage || 'en-US'; // Default to English if not set
+    recognition.interimResults = false; // We only want final results
+    recognition.continuous = false; // Stop listening after first utterance
 
-                                mediaRecorder.addEventListener("stop", () => {
-                                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                                    sendVoiceToBackend(audioBlob);
-                                    
-                                    // Stop all audio tracks to turn off mic light
-                                    stream.getTracks().forEach(track => track.stop());
-                                });
-                            })
-                            .catch(err => {
-                                console.error("Microphone error:", err);
-                                alert("Microphone access denied. Please allow microphone access in your browser settings.");
-                                recordButton.textContent = '🎤';
-                                recordButton.disabled = false;
-                                chatInput.disabled = false;
-                            });
-                    }
-                });
-                
-                // --- 2. NEW FUNCTION TO SEND VOICE TO BACKEND ---
-                // --- 2. REPLACE your old 'sendVoiceToBackend' function with this ---
-                async function sendVoiceToBackend(audioBlob) {
-                    addMessage("... (Processing voice input) ...", 'user');
+    recordButton.addEventListener('click', () => {
+        console.log("Recording started...");
+        recordButton.textContent = '...'; // Show a "listening" state
+        recordButton.disabled = true;
+        try {
+            // Ensure recognition is not already running
+            recognition.stop(); // Stop any previous instance just in case
+            recognition.start();
+        } catch (e) {
+            console.error("Error starting recognition (maybe already running, or stopped prematurely):", e);
+            // If start() fails immediately, reset the button
+            recordButton.textContent = '🎤';
+            recordButton.disabled = false;
+        }
+    });
 
-                    const formData = new FormData();
-                    formData.append('audio', audioBlob, 'recording.webm');
-                    formData.append('userId', user.patientId);
-                    formData.append('language', currentLanguage);
+    // This event fires when speech is recognized
+    recognition.onresult = (event) => {
+        const spokenText = event.results[0][0].transcript;
+        console.log("User said:", spokenText);
+        chatInput.value = spokenText; // Put the text in the chat box
 
-                    const typingIndicator = document.createElement('div');
-                    typingIndicator.classList.add('chat-message', 'bot-message');
-                    typingIndicator.textContent = 'Thinking...';
-                    chatWindow.appendChild(typingIndicator);
-                    chatWindow.scrollTop = chatWindow.scrollHeight;
+        // --- Optional: Automatically send the message ---
+        // Uncomment the line below to send the message immediately after speech is recognized
+        // chatForm.dispatchEvent(new Event('submit'));
+    };
 
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/v1/voice-input`, {
-                            method: 'POST',
-                            body: formData 
-                        });
+    // Handle end of speech processing
+    recognition.onend = () => {
+        console.log("Recognition ended.");
+        recordButton.textContent = '🎤'; // Reset button icon
+        recordButton.disabled = false;
+    };
 
-                        if (!response.ok) {
-                            // This will be caught by the catch block below
-                            throw new Error(`HTTP Error: ${response.status}`); 
-                        }
+    // Handle errors during recognition
+    recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        recordButton.textContent = '🎤'; // Reset button on error
+        recordButton.disabled = false;
 
-                        const data = await response.json();
-                        handleBotResponse(data); 
+        // Provide specific user feedback based on the error type
+        switch(event.error) {
+            case 'no-speech':
+                console.warn("No speech detected.");
+                // Optionally show a small message to the user
+                break;
+            case 'audio-capture':
+                alert("Could not capture audio. Please ensure your microphone is working and allowed.");
+                break;
+            case 'not-allowed':
+                alert("Microphone access denied. Please allow microphone access in your browser settings to use this feature.");
+                break;
+            case 'network':
+                console.error("Network error during speech recognition. Check internet connection.");
+                // Optionally inform the user about network issues
+                break;
+            case 'aborted':
+                console.log("Speech recognition aborted."); // Usually happens if stop() is called early or by user action
+                break;
+            default:
+                alert(`An unknown speech error occurred: ${event.error}`);
+        }
+    };
 
-                    } catch (error) {
-                        console.error('Voice Chat Error:', error); // This is line 3593
-                        addMessage("I'm sorry, I couldn't process your voice. Please try again.", 'bot');
-                    
-                    } finally {
-                        // This 'finally' block runs *no matter what* (after try OR catch)
-                        // This fixes your 'removeChild' bug.
-                        if (chatWindow.contains(typingIndicator)) {
-                            chatWindow.removeChild(typingIndicator); // This removes the indicator
-                        }
-                        // Re-enable buttons after processing
-                        recordButton.disabled = false;
-                        chatInput.disabled = false;
-                    }
-                }
+} else {
+    // Browser doesn't support the API
+    console.log("Speech recognition not supported in this browser.");
+    if(recordButton) { // Check if the button exists before trying to hide it
+       recordButton.style.display = 'none'; // Hide the button if not supported
+    }
+}
+// --- END: Speech-to-Text code ---
 
-                // --- 3. MODIFIED TEXT SUBMIT LISTENER ---
+
+                // This is your FULL original event listener, now it works correctly.
                 chatForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const userInput = chatInput.value.trim();
                     if (!userInput) return;
 
+                    // Store the last user message for contextual button generation
                     enhancedChatbot.lastUserMessage = userInput;
-                    addMessage(userInput, 'user');
+
+                    console.log('Frontend: Sending message:', userInput, 'userId:', user.patientId);
+                    addMessage(userInput, 'user'); // This call now works
                     chatInput.value = '';
 
                     const typingIndicator = document.createElement('div');
@@ -3695,7 +3665,8 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         const sosCheck = await checkForEmergency(userInput);
                         if (sosCheck.emergency_detected) {
                             chatWindow.removeChild(typingIndicator);
-                            // (Your SOS UI logic here...)
+
+                            // Show SOS alert
                             const sosAlert = document.createElement('div');
                             sosAlert.className = 'sos-alert';
                             sosAlert.innerHTML = `
@@ -3704,24 +3675,27 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                                 <p><strong>Emergency Number: 108</strong></p>
                             `;
                             chatWindow.appendChild(sosAlert);
+
+                            // Auto-dial for critical emergencies
                             if (sosCheck.critical && sosCheck.parameters.auto_dial) {
                                 setTimeout(() => {
                                     window.location.href = `tel:${sosCheck.parameters.emergency_number}`;
                                 }, 3000);
                             }
+
                             chatWindow.scrollTop = chatWindow.scrollHeight;
                             chatInput.value = '';
                             return;
                         }
 
-                        // Your original predict call, now with 'language' added
+                        // Your original predict call is preserved
                         const response = await fetch(`${API_BASE_URL}/v1/predict`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 message: userInput,
                                 userId: user.patientId,
-                                language: currentLanguage 
+                                language: currentLanguage
                             })
                         });
 
@@ -3730,22 +3704,25 @@ async sendPredictRequest(message, buttonAction = null, parameters = null) {
                         }
 
                         const data = await response.json();
-                        handleBotResponse(data);
+                        chatWindow.removeChild(typingIndicator);
+
+                        // Use enhanced chatbot handler
+                        await enhancedChatbot.handleChatbotResponse(data);
 
                     } catch (error) {
-                        console.error('Text Chat Error:', error);
+                        console.error('Chat Error:', error);
                         chatWindow.removeChild(typingIndicator);
                         addMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
                     }
                 });
-                
-                // --- 4. Your existing initial messages ---
+
+                // The rest of your function is also preserved
                 addMessage("Welcome to Enhanced Sehat Sahara! I can help with appointments, prescriptions, medicine reminders, and health guidance.", "bot");
+
                 checkMedicineReminders();
+                
                 testPrescriptionEndpoint();
             }
-
-            
 
             
 // --- START: Agora Variables ---
@@ -4204,59 +4181,56 @@ function displayMessage(message, sender) {
     }
 
             function updateRemindersDisplay(reminders, alerts) {
-                // (This logic for the homepage card remains the same)
-                console.log("updateRemindersDisplay: Received reminders count:", reminders ? reminders.length : 'N/A');
-                console.log("updateRemindersDisplay: Received alerts count:", alerts ? alerts.length : 'N/A');
+            // --- START: Add Detailed Logging ---
+            console.log("updateRemindersDisplay: Received reminders count:", reminders ? reminders.length : 'N/A'); // Log count received
+            console.log("updateRemindersDisplay: Received alerts count:", alerts ? alerts.length : 'N/A'); // Log count received
 
-                const pendingEl = document.getElementById('pendingReminders');
-                console.log("updateRemindersDisplay: Found pendingEl:", pendingEl);
+            const pendingEl = document.getElementById('pendingReminders');
+            console.log("updateRemindersDisplay: Found pendingEl:", pendingEl); // Log if the element was found
 
-                if (pendingEl) {
-                    const totalActiveReminders = reminders ? reminders.length : 0;
-                    console.log("updateRemindersDisplay: Setting text content to:", `${totalActiveReminders} Total Active`);
-                    pendingEl.textContent = `${totalActiveReminders} Total Active`;
-                } else {
-                    console.error("updateRemindersDisplay: Could not find element with ID 'pendingReminders'");
-                }
-
-                // --- THIS IS THE MODIFICATION ---
-                // Instead of showing alerts in chat, show the popup modal.
-                if (alerts && alerts.length > 0) {
-                     console.log("updateRemindersDisplay: Showing missed reminder modal");
-                    showMissedReminderModal(alerts); // Call the new modal function
-                } else {
-                     console.log("updateRemindersDisplay: No pending alerts to show in modal.");
-                }
-                // --- END MODIFICATION ---
+            if (pendingEl) {
+                const totalActiveReminders = reminders ? reminders.length : 0;
+                console.log("updateRemindersDisplay: Setting text content to:", `${totalActiveReminders} Total Active`); // Log the text being set
+                pendingEl.textContent = `${totalActiveReminders} Total Active`;
+                console.log("updateRemindersDisplay: Text content AFTER setting:", pendingEl.textContent); // Verify it was set
+            } else {
+                console.error("updateRemindersDisplay: Could not find element with ID 'pendingReminders'"); // Error if element is missing
             }
+            // --- END: Add Detailed Logging ---
 
-            // This new function shows the popup modal
-            function showMissedReminderModal(alerts) {
-                const modal = document.getElementById('missedReminderModal');
-                const listContainer = document.getElementById('missedReminderList');
-                if (!modal || !listContainer) return;
+            // Show alerts in chat if any (This part remains the same)
+            if (alerts && alerts.length > 0 && document.getElementById('chatbotScreen').classList.contains('active')) {
+                 console.log("updateRemindersDisplay: Showing alerts in chat"); // Log chat alert trigger
+                showMedicineAlerts(alerts);
+            } else {
+                 console.log("updateRemindersDisplay: Not showing alerts in chat (alerts:", alerts ? alerts.length : 'N/A', ", chatbot active:", document.getElementById('chatbotScreen').classList.contains('active'), ")");
+            }
+        }
 
-                // Build the HTML for all missed reminders
-                listContainer.innerHTML = alerts.map(alert => `
-                    <div class="reminder-item" id="modal-alert-${alert.medicine_name.replace(/[^a-zA-Z0-9]/g, '-')}">
-                        <div class="reminder-info">
-                            <strong>${alert.medicine_name}</strong> (${alert.dosage})
-                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Scheduled for: ${alert.time}</p>
+            function showMedicineAlerts(alerts) {
+                const chatWindow = document.getElementById('chatWindow');
+                if (!chatWindow) return;
+
+                alerts.forEach(alert => {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'medicine-reminder-card card';
+                    alertDiv.innerHTML = `
+                        <div class="reminder-item">
+                            <div class="reminder-info">
+                                <h4>⏰ Medicine Reminder</h4>
+                                <p><strong>${alert.medicine_name}</strong> - ${alert.dosage}</p>
+                                <p>Time: ${alert.time}</p>
+                            </div>
+                            <div class="reminder-actions">
+                                <button class="btn-taken" onclick="markMedicineTaken('${alert.medicine_name}')">Taken</button>
+                                <button class="btn-skip" onclick="skipMedicine('${alert.medicine_name}')">Skip</button>
+                            </div>
                         </div>
-                        <div class="reminder-actions">
-                            <button class="btn-taken" onclick="markMedicineTaken('${alert.medicine_name}', true)">Mark as Taken</button>
-                            <button class="btn-skip" onclick="skipMedicine('${alert.medicine_name}', true)">Skip This Time</button>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                    chatWindow.appendChild(alertDiv);
+                });
 
-                // Add listener to the main close button
-                document.getElementById('closeMissedReminderModal').onclick = () => {
-                    modal.classList.remove('active');
-                };
-                
-                // Show the modal
-                modal.classList.add('active');
+                chatWindow.scrollTop = chatWindow.scrollHeight;
             }
 
             
@@ -4512,8 +4486,8 @@ function displayMessage(message, sender) {
             let currentlyEditing = null;
 
             // Make functions globally accessible for onclick attributes
-            // Add a new parameter 'fromModal'
-            window.markMedicineTaken = async function(medicineName, fromModal = false) {
+            window.markMedicineTaken = async function(medicineName) {
+                // ... (This function remains the same as before)
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
                         method: 'POST',
@@ -4525,28 +4499,8 @@ function displayMessage(message, sender) {
                             taken_time: new Date().toTimeString().slice(0, 5)
                         })
                     });
-
                     if (response.ok) {
-                        // Hide the card from the chat window (if it's there)
-                        const safeName = medicineName.replace(/[^a-zA-Z0-9]/g, '-');
-                        const chatCard = document.getElementById(`alert-card-${safeName}`);
-                        if (chatCard) chatCard.style.display = 'none';
-
-                        // --- START: NEW MODAL LOGIC ---
-                        if (fromModal) {
-                            // Hide just this item from the modal list
-                            const modalItem = document.getElementById(`modal-alert-${safeName}`);
-                            if (modalItem) modalItem.style.display = 'none';
-                            
-                            // Check if all items are hidden, if so, close the modal
-                            const modal = document.getElementById('missedReminderModal');
-                            if (modal.querySelectorAll('.reminder-item[style*="display: none"]').length === modal.querySelectorAll('.reminder-item').length) {
-                                modal.classList.remove('active');
-                            }
-                        }
-                        // --- END: NEW MODAL LOGIC ---
-
-                        await loadMedicineRemindersScreen(); // Refresh dedicated page
+                        await loadMedicineRemindersScreen();
                         showConfirmationModal('Success', `${medicineName} marked as taken!`);
                     }
                 } catch (error) {
@@ -4554,49 +4508,9 @@ function displayMessage(message, sender) {
                 }
             }
 
-            // --- ADD THIS ENTIRE NEW FUNCTION ---
-            // Add a new parameter 'fromModal'
-            window.skipMedicine = async function(medicineName, fromModal = false) {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/v1/medicine-reminders`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userId: user.patientId,
-                            action: 'skip_alert',
-                            medicine_name: medicineName
-                        })
-                    });
-                    
-                    if (response.ok) {
-                        // Hide the card from the chat window (if it's there)
-                        const safeName = medicineName.replace(/[^a-zA-Z0-9]/g, '-');
-                        const chatCard = document.getElementById(`alert-card-${safeName}`);
-                        if (chatCard) chatCard.style.display = 'none';
-
-                        // --- START: NEW MODAL LOGIC ---
-                        if (fromModal) {
-                            // Hide just this item from the modal list
-                            const modalItem = document.getElementById(`modal-alert-${safeName}`);
-                            if (modalItem) modalItem.style.display = 'none';
-
-                            // Check if all items are hidden, if so, close the modal
-                            const modal = document.getElementById('missedReminderModal');
-                            if (modal.querySelectorAll('.reminder-item[style*="display: none"]').length === modal.querySelectorAll('.reminder-item').length) {
-                                modal.classList.remove('active');
-                            }
-                        }
-                        // --- END: NEW MODAL LOGIC ---
-                        
-                        console.log(`Skipped alert for ${medicineName}`);
-                    } else {
-                        showConfirmationModal('Error', 'Failed to skip reminder.');
-                    }
-                } catch (error) {
-                    console.error('Skip medicine error:', error);
-                }
+            window.skipMedicine = async function(medicineName) {
+                await loadMedicineRemindersScreen();
             }
-            // --- END NEW FUNCTION ---
 
             window.deleteReminder = async function(medicineName) {
                 if (!confirm(`Are you sure you want to delete the reminder for ${medicineName}?`)) {
@@ -4873,12 +4787,7 @@ window.addEventListener('popstate', (event) => {
     // NO ELSE BLOCK. This allows the browser to go back to index.html
     // when event.state is null.
 });       // Make nav buttons clickable
-                setupThemeAndLanguage();  
-                // --- ADD THIS BLOCK TO SET THE DROPDOWN TEXT ON LOAD ---
-                const initialLangText = document.querySelector(`.language-option[data-lang="${currentLanguage}"]`);
-                if (initialLangText) {
-                    document.getElementById('selectedLanguage').textContent = initialLangText.textContent;
-                } // Setup theme/language toggles
+                setupThemeAndLanguage();   // Setup theme/language toggles
 
                 // 5. Render Initial Screen Content (Depends on Core Data)
                        // Render health records timeline
@@ -4982,7 +4891,63 @@ updateView(initialScreen); // Make sure the view matches this initial state
             }
 
             initializeApp();
+            // --- START: Text-to-Speech (TTS) Logic ---
+const chatWindowForTTS = document.getElementById('chatWindow');
 
+// Check if Speech Synthesis is supported
+if ('speechSynthesis' in window) {
+    const synth = window.speechSynthesis;
+    let currentUtterance = null; // To track the currently speaking utterance
+
+    // Use event delegation for dynamically added buttons
+    chatWindowForTTS.addEventListener('click', (event) => {
+        // Check if the clicked element is our speak button
+        if (event.target.classList.contains('speak-button')) {
+            const button = event.target;
+            const textToSpeak = button.dataset.textToSpeak; // Get text from dataset
+
+            if (textToSpeak) {
+                // If currently speaking, stop it first
+                if (synth.speaking && currentUtterance) {
+                    synth.cancel();
+                }
+
+                // Create a new utterance
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+
+                // Optional: Configure voice, rate, pitch
+                utterance.lang = currentLanguage || 'en-US'; // Use the selected language
+                // utterance.rate = 1; // Speed (0.1 to 10)
+                // utterance.pitch = 1; // Pitch (0 to 2)
+
+                // Keep track of this utterance
+                currentUtterance = utterance;
+
+                // Handle the end of speech
+                utterance.onend = () => {
+                    console.log('Finished speaking.');
+                    currentUtterance = null;
+                };
+
+                // Handle errors
+                utterance.onerror = (e) => {
+                    console.error('Speech synthesis error:', e);
+                    currentUtterance = null;
+                };
+
+                // Speak the text
+                synth.speak(utterance);
+            }
+        }
+    });
+
+} else {
+    console.warn("Speech Synthesis (Text-to-Speech) is not supported in this browser.");
+    // Optionally hide all speak buttons if TTS is not supported
+    // This might require adding a class to hide them via CSS initially
+    // and only showing them if 'speechSynthesis' in window is true.
+}
+// --- END: Text-to-Speech (TTS) Logic ---
         });
     </script>
     <!-- Notification Banner for Push Reminders -->
