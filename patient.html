@@ -1077,7 +1077,7 @@
                 </section>
                 <section id="prescriptionsScreen" class="screen">
                      <div class="page-header"><h1 data-key="prescriptions_title">My Prescriptions</h1></div>
-                     <button class="btn btn-primary" id="uploadPrescriptionBtn" style="margin-bottom: 1rem;">Upload Offline Prescription</button>
+                     <button class="btn btn-primary" id="uploadPrescriptionBtn" style="margin-bottom: 1rem;" data-key="upload_prescription_btn">Upload Offline Prescription</button>
                      <div id="prescriptions-container"></div>
                  </section>
                  <section id="medicineRemindersScreen" class="screen">
@@ -1146,9 +1146,9 @@
                         <video id="camera-feed" playsinline></video>
                         <p id="camera-status" data-key="camera_status_default">Click "Open Camera" to start scanning</p>
                         <div style="display: flex; gap: 1rem;">
-                            <button id="openCameraBtn" class="btn btn-primary">Open Camera</button>
-                            <button id="scanCodeBtn" class="btn" disabled>Scan QR Code</button>
-                        </div>
+    <button id="openCameraBtn" class="btn btn-primary" data-key="open_camera">Open Camera</button>
+    <button id="scanCodeBtn" class="btn" data-key="scan_qr_code" disabled>Scan QR Code</button>
+</div>
                     </div>
                 </section>
                  <section id="bookMedicineScreen" class="screen">
@@ -1520,32 +1520,34 @@
     </div>
 </div>
     <div id="medicineReminderModal" class="modal">
-        <form class="modal-content" id="medicineReminderForm"> <h3>Add Medicine Reminder</h3>
-            <div class="form-group">
-                <label for="medicineName">Medicine Name</label>
-                <input type="text" id="medicineName" class="form-control" placeholder="e.g., Paracetamol">
-            </div>
-            <div class="form-group">
-                <label for="medicineDosage">Dosage</label>
-                <input type="text" id="medicineDosage" class="form-control" placeholder="e.g., 500mg">
-            </div>
-            <div class="form-group">
-                <label for="medicineTimes">Times (comma separated)</label>
-                <input type="text" id="medicineTimes" class="form-control" placeholder="e.g., 08:00, 14:00, 20:00">
-            </div>
-            <div class="form-group">
-                <label for="medicineDuration">Duration (days)</label>
-                <input type="number" id="medicineDuration" class="form-control" value="30">
-            </div>
-            <div class="form-group">
-                <label for="medicineInstructions">Instructions</label>
-                <textarea id="medicineInstructions" class="form-control" rows="2" placeholder="e.g., Take after meals"></textarea>
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                <button id="saveReminderBtn" class="btn btn-primary">Save Reminder</button>
-                <button type="button" class="btn" onclick="document.getElementById('medicineReminderModal').classList.remove('active')">Cancel</button>
-            </div>
-        </form> </div>
+    <form class="modal-content" id="medicineReminderForm"> 
+        <h3 data-key="add_reminder_title">Add Medicine Reminder</h3>
+        <div class="form-group">
+            <label for="medicineName" data-key="medicine_name">Medicine Name</label>
+            <input type="text" id="medicineName" class="form-control" data-key="medicine_name_placeholder" placeholder="e.g., Paracetamol">
+        </div>
+        <div class="form-group">
+            <label for="medicineDosage" data-key="dosage">Dosage</label>
+            <input type="text" id="medicineDosage" class="form-control" data-key="medicine_dosage_placeholder" placeholder="e.g., 500mg">
+        </div>
+        <div class="form-group">
+            <label for="medicineTimes" data-key="medicine_times">Times (comma separated)</label>
+            <input type="text" id="medicineTimes" class="form-control" data-key="medicine_times_placeholder" placeholder="e.g., 08:00, 14:00, 20:00">
+        </div>
+        <div class="form-group">
+            <label for="medicineDuration" data-key="medicine_duration">Duration (days)</label>
+            <input type="number" id="medicineDuration" class="form-control" value="30">
+        </div>
+        <div class="form-group">
+            <label for="medicineInstructions" data-key="instructions">Instructions</label>
+            <textarea id="medicineInstructions" class="form-control" rows="2" data-key="medicine_instructions_placeholder" placeholder="e.g., Take after meals"></textarea>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <button id="saveReminderBtn" class="btn btn-primary" data-key="save_reminder">Save Reminder</button>
+            <button type="button" class="btn" onclick="document.getElementById('medicineReminderModal').classList.remove('active')" data-key="cancel">Cancel</button>
+        </div>
+    </form> 
+</div>
 
 
     <script>
@@ -3150,7 +3152,8 @@ document.getElementById('confirmSos').addEventListener('click', () => {
     document.getElementById('viewAllPrescriptions').addEventListener('click', () => showScreen('prescriptionsScreen'));
     document.getElementById('medicineReminders').addEventListener('click', () => { showScreen('medicineRemindersScreen'); loadMedicineRemindersScreen(); });
 }
-            function setupBookMedicine() {
+            // REPLACE your entire 'setupBookMedicine' function with this
+function setupBookMedicine() {
     // --- Element Selectors ---
     const pharmacySelectionContainer = document.getElementById('pharmacySelectionContainer');
     const medicineOrderingContainer = document.getElementById('medicineOrderingContainer');
@@ -3158,6 +3161,19 @@ document.getElementById('confirmSos').addEventListener('click', () => {
     const searchInput = document.getElementById('medicineSearch');
     const selectedPharmacyNameEl = document.getElementById('selectedPharmacyName');
     const changePharmacyBtn = document.getElementById('changePharmacyBtn');
+    
+    // --- NEW: Add translations for category cards ---
+    document.querySelector('.category-card[data-category="pain-fever"] h4').textContent = getText('cat_pain_fever');
+    document.querySelector('.category-card[data-category="pain-fever"] p').textContent = getText('cat_pain_fever_desc');
+    document.querySelector('.category-card[data-category="cough-cold"] h4').textContent = getText('cat_cough_cold');
+    document.querySelector('.category-card[data-category="cough-cold"] p').textContent = getText('cat_cough_cold_desc');
+    document.querySelector('.category-card[data-category="stomach"] h4').textContent = getText('cat_stomach');
+    document.querySelector('.category-card[data-category="stomach"] p').textContent = getText('cat_stomach_desc');
+    document.querySelector('#medicineOrderingContainer h3').textContent = getText('browse_by_category');
+    document.querySelector('#medicineOrderingContainer .form-group label').textContent = getText('search_for_medicine');
+    document.querySelector('#medicineSearch').placeholder = getText('search_placeholder');
+    // --- END NEW ---
+
     // --- Event Handling & State Management ---
 
             // Resets the view to show the pharmacy list again
@@ -3194,7 +3210,10 @@ document.getElementById('confirmSos').addEventListener('click', () => {
         
         pharmacySelectionContainer.style.display = 'none';
         medicineOrderingContainer.style.display = 'block';
-        selectedPharmacyNameEl.textContent = `Ordering from: ${selectedPharmacy.name}`;
+        // --- MODIFIED ---
+        selectedPharmacyNameEl.textContent = getText('ordering_from', { name: selectedPharmacy.name });
+        changePharmacyBtn.textContent = getText('change');
+        // --- END MODIFIED ---
         
         const firstCategoryCard = document.querySelector('.category-card');
         if (firstCategoryCard) {
@@ -3208,6 +3227,7 @@ document.getElementById('confirmSos').addEventListener('click', () => {
         const medicineGrid = document.getElementById('medicineGrid');
         let medicinesToShow = isSearchResult ? source : (appData.medicines[source] || []);
         
+        // --- MODIFIED ---
         medicineGrid.innerHTML = medicinesToShow.map(med => `
             <div class="medicine-card card">
                 <div class="medicine-name">${med.name}</div>
@@ -3218,9 +3238,10 @@ document.getElementById('confirmSos').addEventListener('click', () => {
                     <input type="number" class="quantity-input" data-med-id="${med.id}" value="1" min="1" max="99" readonly>
                     <button class="quantity-btn" data-action="increase" data-med-id="${med.id}">+</button>
                 </div>
-                <button class="btn btn-primary add-to-cart-btn" data-med-id="${med.id}">Add to Cart</button>
+                <button class="btn btn-primary add-to-cart-btn" data-med-id="${med.id}">${getText('add_to_cart')}</button>
             </div>
         `).join('');
+        // --- END MODIFIED ---
         
         attachMedicineCardListeners(medicinesToShow);
     };
@@ -3250,7 +3271,9 @@ document.getElementById('confirmSos').addEventListener('click', () => {
                 if (medicine) {
                     addToCart(medicine, quantity);
                     updateCartIcon();
-                    showConfirmationModal('Added to Cart', `${medicine.name} (${quantity}) has been added.`);
+                    // --- MODIFIED ---
+                    showConfirmationModal(getText('added_to_cart_title'), `${medicine.name} (${quantity}) has been added.`);
+                    // --- END MODIFIED ---
                 }
             });
         });
@@ -3258,15 +3281,14 @@ document.getElementById('confirmSos').addEventListener('click', () => {
 
     // --- Cart & Checkout Management ---
 
-    // FIND AND REPLACE this function *inside* setupBookMedicine
-const addToCart = (medicine, quantity) => {
-    const existingItem = medicineCart.find(item => item.id === medicine.id);
-    if (existingItem) {
-        existingItem.quantity += quantity;
-    } else {
-        medicineCart.push({ ...medicine, quantity });
-    }
-};
+    const addToCart = (medicine, quantity) => {
+        const existingItem = medicineCart.find(item => item.id === medicine.id);
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            medicineCart.push({ ...medicine, quantity });
+        }
+    };
 
     const updateCartIcon = () => {
         const cartBadge = document.querySelector('.cart-badge');
@@ -3274,17 +3296,33 @@ const addToCart = (medicine, quantity) => {
         const totalItems = medicineCart.reduce((sum, item) => sum + item.quantity, 0);
         cartBadge.textContent = totalItems;
         cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
+
+        // --- NEW: Also update checkout button text ---
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        if (checkoutBtn) {
+            checkoutBtn.textContent = getText('checkout_btn', { count: totalItems });
+            checkoutBtn.disabled = totalItems === 0;
+        }
     };
 
     // Updates the content of the shopping cart modal
     const updateCartModal = () => {
         const cartItemsContainer = document.getElementById('cartItemsContainer');
         const cartTotalEl = document.getElementById('cartTotal');
+        // --- NEW: Also translate modal title and buttons ---
+        const cartModal = document.getElementById('cartModal');
+        cartModal.querySelector('h3').textContent = getText('shopping_cart_title');
+        cartModal.querySelector('.btn:not(.btn-primary)').textContent = getText('continue_shopping');
+        cartModal.querySelector('.btn-primary').textContent = getText('proceed_to_checkout');
+        // --- END NEW ---
+
         if (!cartItemsContainer || !cartTotalEl) return;
 
         if (medicineCart.length === 0) {
-            cartItemsContainer.innerHTML = '<p style="text-align: center; color: var(--text-color-secondary);">Your cart is empty</p>';
+            // --- MODIFIED ---
+            cartItemsContainer.innerHTML = `<p style="text-align: center; color: var(--text-color-secondary);">${getText('cart_empty')}</p>`;
             cartTotalEl.textContent = '₹0.00';
+            // --- END MODIFIED ---
             return;
         }
 
@@ -3345,7 +3383,9 @@ const addToCart = (medicine, quantity) => {
     window.nextCheckoutStep = () => {
         if (checkoutStep === 1) {
             if (!document.getElementById('deliveryAddress').value.trim()) {
-                showConfirmationModal('Address Required', 'Please enter your delivery address.');
+                // --- MODIFIED ---
+                showConfirmationModal(getText('address_required_title'), getText('address_required_msg'));
+                // --- END MODIFIED ---
                 return;
             }
             document.getElementById('checkoutAddress').textContent = document.getElementById('deliveryAddress').value;
@@ -3390,135 +3430,119 @@ const addToCart = (medicine, quantity) => {
         document.getElementById('upiId').value = phone + suffix;
     };
 
-    // A simple validation placeholder
-    const validatePaymentForm = (method) => {
-        // In a real app, you'd have robust validation here
-        if (method === 'card' && document.getElementById('cardNumber').value.length < 19) {
-            showConfirmationModal('Invalid Card', 'Please enter a valid 16-digit card number.');
-            return false;
-        }
-        if (method === 'upi' && !document.getElementById('upiId').value.includes('@')) {
-            showConfirmationModal('Invalid UPI', 'Please enter a valid UPI ID.');
-            return false;
-        }
-        return true;
-    };
-
     // --- Order Placement ---
-    // FIND AND REPLACE this function *inside* setupBookMedicine
-window.processPayment = async () => {
-    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-    
-    // --- MODIFIED (VALIDATION LOGIC) ---
-    const validatePaymentForm = (method) => {
-        // In a real app, you'd have robust validation here
-        if (method === 'card' && document.getElementById('cardNumber').value.length < 19) {
-            showConfirmationModal(getText('invalid_card_title'), getText('invalid_card_msg'));
-            return false;
-        }
-        if (method === 'upi' && !document.getElementById('upiId').value.includes('@')) {
-            showConfirmationModal(getText('invalid_upi_title'), getText('invalid_upi_msg'));
-            return false;
-        }
-        return true;
-    };
-    // --- END MODIFIED ---
-
-    if (!validatePaymentForm(paymentMethod)) return;
-
-    const processBtn = document.querySelector('#checkoutStep3 .btn-primary');
-    // --- MODIFIED ---
-    processBtn.textContent = getText('processing');
-    processBtn.disabled = true;
-    // --- END MODIFIED ---
-
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-
-    placeOrder(); // Place order on successful payment simulation
-
-    // --- MODIFIED ---
-    processBtn.textContent = getText('proceed_to_pay');
-    processBtn.disabled = false;
-    // --- END MODIFIED ---
-};
-
-    // FIND AND REPLACE this function *inside* setupBookMedicine
-const placeOrder = async () => {
-    // Check for user authentication first
-    if (!user || !user.patientId) {
-        // --- MODIFIED ---
-        showConfirmationModal(getText('login_required_title'), getText('login_required_msg'));
+    window.processPayment = async () => {
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+        
+        // --- MODIFIED (VALIDATION LOGIC) ---
+        const validatePaymentForm = (method) => {
+            // In a real app, you'd have robust validation here
+            if (method === 'card' && document.getElementById('cardNumber').value.length < 19) {
+                showConfirmationModal(getText('invalid_card_title'), getText('invalid_card_msg'));
+                return false;
+            }
+            if (method === 'upi' && !document.getElementById('upiId').value.includes('@')) {
+                showConfirmationModal(getText('invalid_upi_title'), getText('invalid_upi_msg'));
+                return false;
+            }
+            return true;
+        };
         // --- END MODIFIED ---
-        return;
-    }
-    // Check if a pharmacy is selected
-    if (!selectedPharmacy || !selectedPharmacy.id) {
-        // --- MODIFIED ---
-        showConfirmationModal(getText('pharmacy_required_title'), getText('pharmacy_required_msg'));
-        // --- END MODIFIED ---
-        return;
-    }
 
-    const orderData = {
-        // --- FIX: ADD THE PATIENT'S ID TO THE REQUEST ---
-        userId: user.patientId,
-        pharmacyId: selectedPharmacy.id, // The backend expects pharmacyId
-        items: medicineCart.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
-        deliveryAddress: document.getElementById('deliveryAddress').value.trim(),
-        paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value
+        if (!validatePaymentForm(paymentMethod)) return;
+
+        const processBtn = document.querySelector('#checkoutStep3 .btn-primary');
+        // --- MODIFIED ---
+        processBtn.textContent = getText('processing');
+        processBtn.disabled = true;
+        // --- END MODIFIED ---
+
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+
+        placeOrder(); // Place order on successful payment simulation
+
+        // --- MODIFIED ---
+        processBtn.textContent = getText('proceed_to_pay');
+        processBtn.disabled = false;
+        // --- END MODIFIED ---
     };
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/v1/orders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // Important: Sends the session cookie for authentication
-            body: JSON.stringify(orderData)
-        });
+    const placeOrder = async () => {
+        // Check for user authentication first
+        if (!user || !user.patientId) {
+            // --- MODIFIED ---
+            showConfirmationModal(getText('login_required_title'), getText('login_required_msg'));
+            // --- END MODIFIED ---
+            return;
+        }
+        // Check if a pharmacy is selected
+        if (!selectedPharmacy || !selectedPharmacy.id) {
+            // --- MODIFIED ---
+            showConfirmationModal(getText('pharmacy_required_title'), getText('pharmacy_required_msg'));
+            // --- END MODIFIED ---
+            return;
+        }
 
-        const result = await response.json();
+        const orderData = {
+            // --- FIX: ADD THE PATIENT'S ID TO THE REQUEST ---
+            userId: user.patientId,
+            pharmacyId: selectedPharmacy.id, // The backend expects pharmacyId
+            items: medicineCart.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
+            deliveryAddress: document.getElementById('deliveryAddress').value.trim(),
+            paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value
+        };
 
-        if (response.ok && result.success) {
-            // Use the REAL order details from the backend for the confirmation screen
-            const newOrder = {
-                id: result.orderId,
-                items: [...medicineCart],
-                total: result.totalAmount,
-                status: 'Order Placed',
-                date: new Date().toISOString(),
-                pharmacyName: selectedPharmacy.name
-            };
-            appData.orders.unshift(newOrder); // Add to local data for immediate UI update
-
-            // Add to health record timeline
-            appData.records.unshift({
-                date: newOrder.date.split('T')[0],
-                title: `Medicine Order - ${selectedPharmacy.name}`,
-                description: `Ordered ${medicineCart.length} items. Order ID: ${result.orderId}`
+        try {
+            const response = await fetch(`${API_BASE_URL}/v1/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // Important: Sends the session cookie for authentication
+                body: JSON.stringify(orderData)
             });
 
-            // Show confirmation screen using data from the backend
-            document.getElementById('orderIdDisplay').textContent = result.orderId;
-            document.getElementById('deliveryTimeDisplay').textContent = result.estimatedDelivery;
-            showCheckoutStep(4);
+            const result = await response.json();
 
-            // Reset and update UI
-            medicineCart = [];
-            updateCartIcon();
-            generateTimeline();
-            generateOrdersList();
-        } else {
+            if (response.ok && result.success) {
+                // Use the REAL order details from the backend for the confirmation screen
+                const newOrder = {
+                    id: result.orderId,
+                    items: [...medicineCart],
+                    total: result.totalAmount,
+                    status: 'Order Placed',
+                    date: new Date().toISOString(),
+                    pharmacyName: selectedPharmacy.name
+                };
+                appData.orders.unshift(newOrder); // Add to local data for immediate UI update
+
+                // Add to health record timeline
+                appData.records.unshift({
+                    date: newOrder.date.split('T')[0],
+                    title: `Medicine Order - ${selectedPharmacy.name}`,
+                    description: `Ordered ${medicineCart.length} items. Order ID: ${result.orderId}`
+                });
+
+                // Show confirmation screen using data from the backend
+                document.getElementById('orderIdDisplay').textContent = result.orderId;
+                document.getElementById('deliveryTimeDisplay').textContent = result.estimatedDelivery;
+                showCheckoutStep(4);
+
+                // Reset and update UI
+                medicineCart = [];
+                updateCartIcon();
+                generateTimeline();
+                generateOrdersList();
+            } else {
+                // --- MODIFIED ---
+                throw new Error(result.message || getText('order_failed_title'));
+                // --- END MODIFIED ---
+            }
+        } catch (error) {
+            console.error('Order placement error:', error);
             // --- MODIFIED ---
-            throw new Error(result.message || getText('order_failed_title'));
+            showConfirmationModal(getText('order_failed_title'), getText('order_failed_generic_msg', { error: error.message }));
             // --- END MODIFIED ---
         }
-    } catch (error) {
-        console.error('Order placement error:', error);
-        // --- MODIFIED ---
-        showConfirmationModal(getText('order_failed_title'), getText('order_failed_generic_msg', { error: error.message }));
-        // --- END MODIFIED ---
-    }
-};
+    };
     
     window.trackOrder = () => {
         document.getElementById('checkoutModal').classList.remove('active');
@@ -3575,7 +3599,9 @@ const placeOrder = async () => {
 
     document.getElementById('proceedToCheckoutBtn').addEventListener('click', () => {
         if (medicineCart.length === 0) {
-            showConfirmationModal('Cart Empty', 'Please add items to your cart.');
+            // --- MODIFIED ---
+            showConfirmationModal(getText('cart_empty_title'), getText('cart_empty_msg'));
+            // --- END MODIFIED ---
             return;
         }
         document.getElementById('cartModal').classList.remove('active');
