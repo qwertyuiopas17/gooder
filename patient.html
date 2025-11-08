@@ -2536,11 +2536,11 @@ langMenu.addEventListener('click', async (e) => {
 
         // 3. Re-build any other dynamic UI (like the cart modal, if it's open)
         updateCartModal();
-        // --- ADD THESE TWO LINES ---
-    await loadChatHistory();
-    await checkMedicineReminders();
+        
 
         console.log("UI refresh complete.");
+        await loadChatHistory();
+    await checkMedicineReminders();
     } 
 });
             }
