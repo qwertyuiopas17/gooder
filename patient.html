@@ -1558,101 +1558,9 @@
         // For Render deployment, uncomment if needed:
          //const API_BASE_URL = 'https://sahara-sathi.onrender.com';
         const API_BASE_URL = '/api';
-                    // SOS Countdown Function
-let sosCountdownInterval;
-// REPLACE your old 'startSosCountdown' function with this:
-function startSosCountdown(user) {
-    document.getElementById('sosCountdownModal').classList.add('active');
-    let countdown = 5;
-    const countdownElement = document.getElementById('countdownNumber');
-    const countdownTextEl = document.getElementById('countdownText'); // Get the text element
-
-    // Set initial text using the helper
-    countdownTextEl.textContent = getText('sos_countdown_text', { seconds: countdown });
-    countdownElement.textContent = countdown;
-
-    sosCountdownInterval = setInterval(() => {
-        countdown--;
-        countdownElement.textContent = countdown;
-        // Update text every second
-        countdownTextEl.textContent = getText('sos_countdown_text', { seconds: countdown });
-
-        if (countdown <= 0) {
-            clearInterval(sosCountdownInterval);
-            document.getElementById('sosCountdownModal').classList.remove('active');
-            triggerSos(user);
-        }
-    }, 1000);
-
-    // Cancel button
-    document.getElementById('cancelCountdown').onclick = () => {
-        clearInterval(sosCountdownInterval);
-        document.getElementById('sosCountdownModal').classList.remove('active');
-    };
-}
-
-// Trigger SOS after countdown
-// REPLACE your old 'triggerSos' function with this:
-async function triggerSos(user) {
-    try {
-        // Get location
-        if (!navigator.geolocation) {
-            // Using a generic title. You could add a 'geolocation_failed_title' key
-            showConfirmationModal(getText('sos_failed_title'), 'Geolocation is not supported by this browser.');
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            const location = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-            };
-
-            // NOTE: This endpoint does not exist in your backend yet.
-            const response = await fetch(`${API_BASE_URL}/v1/sos-trigger`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.patientId,
-                    location: location,
-                    message: 'Emergency SOS activated by patient'
-                })
-            });
-
-            if (response.ok) {
-                showConfirmationModal(getText('sos_activated_title'), getText('sos_activated_msg'));
-            } else {
-                showConfirmationModal(getText('sos_failed_title'), getText('sos_failed_msg'));
-            }
-        }, (error) => {
-            console.error('Geolocation error:', error);
-            // Fallback: trigger SOS without location
-            fetch(`${API_BASE_URL}/v1/sos-trigger`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.patientId,
-                    message: 'Emergency SOS activated by patient (location unavailable)'
-                })
-            }).then(response => {
-                if (response.ok) {
-                    showConfirmationModal(getText('sos_activated_title'), getText('sos_activated_msg'));
-                } else {
-                    showConfirmationModal(getText('sos_failed_title'), getText('sos_failed_msg'));
-                }
-            });
-        });
-    } catch (error) {
-        console.error('SOS trigger error:', error);
-        showConfirmationModal(getText('sos_failed_title'), getText('sos_failed_msg'));
-    }
-}
-
-        console.log('Using API base URL:', API_BASE_URL);
-        let medicineCart = [], selectedPharmacy = null;
-
-        document.addEventListener('DOMContentLoaded', async function() {
-            // --- REPLACE this line: let user = null, currentLanguage = 'en', ...
+         // --- REPLACE this line: let user = null, currentLanguage = 'en', ... 
+         console.log('Using API base URL:', API_BASE_URL);
+         
             let user = null, bookingState = {}, currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear(), medicineCart = [], selectedPharmacy = null, doctors = [];
             
             // --- ADD THIS BLOCK to load the saved language ---
@@ -2281,6 +2189,100 @@ hi: {
         
         return text;
     }
+                    // SOS Countdown Function
+let sosCountdownInterval;
+// REPLACE your old 'startSosCountdown' function with this:
+function startSosCountdown(user) {
+    document.getElementById('sosCountdownModal').classList.add('active');
+    let countdown = 5;
+    const countdownElement = document.getElementById('countdownNumber');
+    const countdownTextEl = document.getElementById('countdownText'); // Get the text element
+
+    // Set initial text using the helper
+    countdownTextEl.textContent = getText('sos_countdown_text', { seconds: countdown });
+    countdownElement.textContent = countdown;
+
+    sosCountdownInterval = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = countdown;
+        // Update text every second
+        countdownTextEl.textContent = getText('sos_countdown_text', { seconds: countdown });
+
+        if (countdown <= 0) {
+            clearInterval(sosCountdownInterval);
+            document.getElementById('sosCountdownModal').classList.remove('active');
+            triggerSos(user);
+        }
+    }, 1000);
+
+    // Cancel button
+    document.getElementById('cancelCountdown').onclick = () => {
+        clearInterval(sosCountdownInterval);
+        document.getElementById('sosCountdownModal').classList.remove('active');
+    };
+}
+
+// Trigger SOS after countdown
+// REPLACE your old 'triggerSos' function with this:
+async function triggerSos(user) {
+    try {
+        // Get location
+        if (!navigator.geolocation) {
+            // Using a generic title. You could add a 'geolocation_failed_title' key
+            showConfirmationModal(getText('sos_failed_title'), 'Geolocation is not supported by this browser.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const location = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+
+            // NOTE: This endpoint does not exist in your backend yet.
+            const response = await fetch(`${API_BASE_URL}/v1/sos-trigger`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.patientId,
+                    location: location,
+                    message: 'Emergency SOS activated by patient'
+                })
+            });
+
+            if (response.ok) {
+                showConfirmationModal(getText('sos_activated_title'), getText('sos_activated_msg'));
+            } else {
+                showConfirmationModal(getText('sos_failed_title'), getText('sos_failed_msg'));
+            }
+        }, (error) => {
+            console.error('Geolocation error:', error);
+            // Fallback: trigger SOS without location
+            fetch(`${API_BASE_URL}/v1/sos-trigger`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.patientId,
+                    message: 'Emergency SOS activated by patient (location unavailable)'
+                })
+            }).then(response => {
+                if (response.ok) {
+                    showConfirmationModal(getText('sos_activated_title'), getText('sos_activated_msg'));
+                } else {
+                    showConfirmationModal(getText('sos_failed_title'), getText('sos_failed_msg'));
+                }
+            });
+        });
+    } catch (error) {
+        console.error('SOS trigger error:', error);
+        showConfirmationModal(getText('sos_failed_title'), getText('sos_failed_msg'));
+    }
+}
+
+       
+
+        document.addEventListener('DOMContentLoaded', async function() {
+           
 
             const appData = {
                 records: [ { date: "2025-09-15", title: "Consultation with Dr. Priya Sharma", description: "Follow-up regarding skin rash. Prescription for ointment updated." }, { date: "2025-08-02", title: "Blood Test Report Uploaded", description: "Complete Blood Count (CBC) report added." } ],
