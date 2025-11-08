@@ -828,7 +828,26 @@
         }
 
         @media (max-width: 767px) {
-            .header { position: relative; z-index: 100; transform: none; width: 100%; border-radius: 0; padding: 1rem; }
+
+            .header { 
+                /* This was our fix for the dropdown */
+                position: relative; 
+                z-index: 100;
+
+                /* These reset the desktop centering */
+                transform: none; 
+                left: 0;
+                top: 0;
+                
+                /* These reset the desktop width */
+                width: 100%;
+                max-width: 100%;
+
+                /* These reset the desktop style */
+                border-radius: 0; 
+                padding: 1rem; 
+            }
+
             .page-content { padding-top: 1rem; }
 
             .dashboard-grid {
