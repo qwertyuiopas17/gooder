@@ -1082,9 +1082,9 @@
                  </section>
                  <section id="medicineRemindersScreen" class="screen">
                      <div class="page-header">
-                         <h1>💊 Medicine Reminders</h1>
-                         <button class="btn btn-primary" id="addReminderBtn" style="margin-top: 1rem;">Add New Reminder</button>
-                     </div>
+                         <h1 data-key="reminders_title">💊 Medicine Reminders</h1>
+         <button class="btn btn-primary" id="addReminderBtn" style="margin-top: 1rem;" data-key="add_new_reminder">Add New Reminder</button>
+     </div>
                      <div id="remindersContainer">
                          <!-- Medicine reminders will be loaded here -->
                      </div>
@@ -1153,14 +1153,14 @@
                 </section>
                  <section id="bookMedicineScreen" class="screen">
     <div class="page-header">
-        <h1>Book Medicine</h1>
-        <button id="goToTrackOrdersBtn" class="btn" style="margin-top: 1rem;">Track My Orders</button>
+        <h1 data-key="book_medicine_title">Book Medicine</h1>
+        <button id="goToTrackOrdersBtn" class="btn" style="margin-top: 1rem;" data-key="track_my_orders">Track My Orders</button>
     </div>
 
     <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 2rem; text-align: center;">
-        <h3 style="margin-bottom: 1rem;">📤 Upload Prescription</h3>
-        <p style="margin-bottom: 1.5rem; opacity: 0.9;">Get medicines delivered based on your doctor's prescription</p>
-        <button id="uploadPrescriptionBannerBtn" class="btn btn-primary" style="background: white; color: #667eea; border: 2px solid white;">Upload Prescription</button>
+        <h3 style="margin-bottom: 1rem;" data-key="upload_prescription_banner_title">📤 Upload Prescription</h3>
+        <p style="margin-bottom: 1.5rem; opacity: 0.9;" data-key="upload_prescription_banner_desc">Get medicines delivered based on your doctor's prescription</p>
+        <button id="uploadPrescriptionBannerBtn" class="btn btn-primary" ... data-key="upload_prescription_banner_btn">Upload Prescription</button>
     </div>
 
     <div id="pharmacySelectionContainer">
@@ -1249,164 +1249,143 @@
    <div class="modal-content" style="max-width: 700px; width: 95%;">
        <div id="checkoutSteps">
            <div class="checkout-step active" id="checkoutStep1">
-               <h3>📍 Delivery Address</h3>
-               <div class="form-group">
-                   <label for="deliveryAddress">Full Address</label>
-                   <textarea id="deliveryAddress" class="form-control" rows="3" placeholder="Enter your complete delivery address"></textarea>
-               </div>
-               <div class="form-group">
-                   <label for="deliveryInstructions">Delivery Instructions (Optional)</label>
-                   <input type="text" id="deliveryInstructions" class="form-control" placeholder="e.g., Ring doorbell twice">
-               </div>
-               <button class="btn btn-primary" onclick="nextCheckoutStep()">Continue to Order Summary</button>
-           </div>
+    <h3 data-key="checkout_step1_title">📍 Delivery Address</h3>
+    <div class="form-group">
+        <label for="deliveryAddress" data-key="checkout_address">Full Address</label>
+        <textarea id="deliveryAddress" class="form-control" rows="3" placeholder_data_key="checkout_address_placeholder"></textarea> </div>
+    <div class="form-group">
+        <label for="deliveryInstructions" data-key="checkout_instructions">Delivery Instructions (Optional)</label>
+        <input type="text" id="deliveryInstructions" class="form-control" placeholder_data_key="checkout_instructions_placeholder">
+    </div>
+    <button class="btn btn-primary" onclick="nextCheckoutStep()" data-key="checkout_continue_to_summary">Continue to Order Summary</button>
+</div>
 
            <div class="checkout-step" id="checkoutStep2">
-               <h3>📋 Order Summary</h3>
+               <h3 data-key="checkout_step2_title">📋 Order Summary</h3>
                <div id="checkoutOrderSummary">
                    <div style="margin-bottom: 1.5rem;">
-                       <h4>Delivery Address:</h4>
+                       <h4 data-key="checkout_delivery_address">Delivery Address:</h4>
                        <p id="checkoutAddress" style="background: var(--color-secondary); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;"></p>
                    </div>
                    <div style="margin-bottom: 1.5rem;">
-                       <h4>Items:</h4>
+                       <h4 data-key="checkout_items">Items:</h4>
                        <div id="checkoutItems" style="max-height: 200px; overflow-y: auto; background: var(--color-secondary); border-radius: 8px; padding: 1rem;">
                            </div>
                    </div>
                    <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
                        <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 1.1rem;">
-                           <span>Total:</span>
+                           <span data-key="cart_total">Total:</span>
                            <span id="checkoutTotal">₹0.00</span>
                        </div>
                    </div>
                </div>
                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                   <button class="btn" onclick="prevCheckoutStep()">Back</button>
-                   <button class="btn btn-primary" onclick="nextCheckoutStep()">Continue to Payment</button>
+                   <button class="btn" onclick="prevCheckoutStep()" data-key="back">Back</button>
+                   <button class="btn btn-primary" onclick="nextCheckoutStep()" data-key="checkout_continue_to_payment">Continue to Payment</button>
                </div>
            </div>
 
            <div class="checkout-step" id="checkoutStep3">
-               <h3>💳 Payment Method</h3>
+               <h3 data-key="checkout_step3_title">💳 Payment Method</h3>
                <div class="payment-methods" style="display: grid; gap: 1rem;">
+                   
                    <label class="payment-option card" style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem;">
                        <input type="radio" name="paymentMethod" value="card" checked>
                        <div>
-                           <strong>Credit / Debit Card</strong>
-                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;">Visa, Mastercard, RuPay</p>
+                           <strong data-key="payment_card">Credit / Debit Card</strong>
+                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;" data-key="payment_card_desc">Visa, Mastercard, RuPay</p>
                        </div>
                    </label>
+                   
                    <label class="payment-option card" style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem;">
                        <input type="radio" name="paymentMethod" value="netbanking">
                        <div>
-                           <strong>Net Banking</strong>
-                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;">All major banks supported</p>
+                           <strong data-key="payment_netbanking">Net Banking</strong>
+                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;" data-key="payment_netbanking_desc">All major banks supported</p>
                        </div>
                    </label>
+                   
                    <label class="payment-option card" style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem;">
                        <input type="radio" name="paymentMethod" value="upi">
                        <div>
-                           <strong>UPI</strong>
-                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;">Paytm, Google Pay, PhonePe, etc.</p>
+                           <strong data-key="payment_upi">UPI</strong>
+                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;" data-key="payment_upi_desc">Paytm, Google Pay, PhonePe, etc.</p>
                        </div>
                    </label>
+                   
                    <label class="payment-option card" style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem;">
                        <input type="radio" name="paymentMethod" value="cod">
                        <div>
-                           <strong>Cash on Delivery</strong>
-                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;">Pay when you receive your order</p>
+                           <strong data-key="payment_cod">Cash on Delivery</strong>
+                           <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.8;" data-key="payment_cod_desc">Pay when you receive your order</p>
                        </div>
                    </label>
                </div>
 
                <div id="cardPaymentForm" class="payment-form" style="display: none; margin-top: 1.5rem;">
                    <div class="card" style="padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
-                       <h4 style="margin-bottom: 1rem; color: var(--primary-color);">💳 Card Details</h4>
+                       <h4 style="margin-bottom: 1rem; color: var(--primary-color);" data-key="card_details">💳 Card Details</h4>
                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                            <div class="form-group">
-                               <label for="cardNumber">Card Number</label>
+                               <label for="cardNumber" data-key="card_number">Card Number</label>
                                <input type="text" id="cardNumber" class="form-control" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCardNumber(this)">
                            </div>
                            <div class="form-group">
-                               <label for="expiryDate">Expiry Date</label>
+                               <label for="expiryDate" data-key="card_expiry">Expiry Date</label>
                                <input type="text" id="expiryDate" class="form-control" placeholder="MM/YY" maxlength="5" oninput="formatExpiryDate(this)">
                            </div>
                        </div>
                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                            <div class="form-group">
-                               <label for="cvv">CVV</label>
+                               <label for="cvv" data-key="card_cvv">CVV</label>
                                <input type="text" id="cvv" class="form-control" placeholder="123" maxlength="4">
                            </div>
                            <div class="form-group">
-                               <label for="cardholderName">Cardholder Name</label>
+                               <label for="cardholderName" data-key="card_name">Cardholder Name</label>
                                <input type="text" id="cardholderName" class="form-control" placeholder="John Doe">
                            </div>
                        </div>
-                       <div class="card-preview" style="background: linear-gradient(135deg, #0d9488, #14b8a6); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                           <div style="display: flex; justify-content: space-between; align-items: center;">
-                               <div>
-                                   <div style="font-size: 0.9rem; opacity: 0.8;">Card Number</div>
-                                   <div id="previewCardNumber">•••• •••• •••• ••••</div>
-                               </div>
-                               <div style="text-align: right;">
-                                   <div style="font-size: 0.9rem; opacity: 0.8;">Valid Thru</div>
-                                   <div id="previewExpiryDate">••/••</div>
-                               </div>
-                           </div>
                        </div>
-                   </div>
                </div>
 
                <div id="upiPaymentForm" class="payment-form" style="display: none; margin-top: 1.5rem;">
                    <div class="card" style="padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
-                       <h4 style="margin-bottom: 1rem; color: var(--primary-color);">📱 UPI Payment</h4>
+                       <h4 style="margin-bottom: 1rem; color: var(--primary-color);" data-key="upi_details">📱 UPI Payment</h4>
                        <div class="form-group">
-                           <label for="upiId">UPI ID</label>
+                           <label for="upiId" data-key="upi_id">UPI ID</label>
                            <input type="text" id="upiId" class="form-control" placeholder="yourname@paytm / yourname@oksbi">
                        </div>
-                       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
-                           <button type="button" class="btn" style="background: #5f259f; color: white;" onclick="setUpiId('paytm')">Paytm</button>
-                           <button type="button" class="btn" style="background: #1f4de4; color: white;" onclick="setUpiId('gpay')">Google Pay</button>
-                           <button type="button" class="btn" style="background: #5f259f; color: white;" onclick="setUpiId('phonepe')">PhonePe</button>
                        </div>
-                   </div>
                </div>
 
                <div id="netbankingForm" class="payment-form" style="display: none; margin-top: 1.5rem;">
                    <div class="card" style="padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
-                       <h4 style="margin-bottom: 1rem; color: var(--primary-color);">🏦 Net Banking</h4>
+                       <h4 style="margin-bottom: 1rem; color: var(--primary-color);" data-key="netbanking_details">🏦 Net Banking</h4>
                        <div class="form-group">
-                           <label for="bankSelect">Select Your Bank</label>
-                           <select id="bankSelect" class="form-control">
-                               <option value="">Choose your bank...</option>
-                               <option value="sbi">State Bank of India</option>
-                               <option value="hdfc">HDFC Bank</option>
-                               <option value="icici">ICICI Bank</option>
-                               <option value="axis">Axis Bank</option>
-                               <option value="pnb">Punjab National Bank</option>
-                               <option value="kotak">Kotak Mahindra Bank</option>
-                               <option value="other">Other Banks</option>
-                           </select>
+                           <label for="bankSelect" data-key="netbanking_select_bank">Select Your Bank</label>
+                           <select id="bankSelect" class="form-control" data-key-placeholder="netbanking_select_bank_placeholder">
+                               <option value="" data-key="netbanking_select_bank_placeholder">Choose your bank...</option>
+                               </select>
                        </div>
                    </div>
                </div>
 
                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                   <button class="btn" onclick="prevCheckoutStep()">Back</button>
-                   <button class="btn btn-primary" onclick="processPayment()">Proceed to Pay</button>
+                   <button class="btn" onclick="prevCheckoutStep()" data-key="back">Back</button>
+                   <button class="btn btn-primary" onclick="processPayment()" data-key="proceed_to_pay">Proceed to Pay</button>
                </div>
            </div>
 
            <div class="checkout-step" id="checkoutStep4">
                <div style="text-align: center;">
                    <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-                   <h3>Order Placed Successfully!</h3>
-                   <p style="margin: 1rem 0; color: var(--text-color-secondary);">Your order has been received and is being processed.</p>
+                   <h3 data-key="checkout_step4_title">Order Placed Successfully!</h3>
+                   <p style="margin: 1rem 0; color: var(--text-color-secondary);" data-key="checkout_success_msg">Your order has been received and is being processed.</p>
                    <div class="card" style="margin: 1.5rem 0; text-align: left;">
-                       <p><strong>Order ID:</strong> <span id="orderIdDisplay"></span></p>
-                       <p><strong>Estimated Delivery:</strong> <span id="deliveryTimeDisplay"></span></p>
+                       <p><strong data-key="order_id">Order ID:</strong> <span id="orderIdDisplay"></span></p>
+                       <p><strong data-key="est_delivery">Estimated Delivery:</strong> <span id="deliveryTimeDisplay"></span></p>
                    </div>
-                   <button class="btn btn-primary" onclick="trackOrder()">Track Your Order</button>
+                   <button class="btn btn-primary" onclick="trackOrder()" data-key="track_your_order">Track Your Order</button>
                </div>
            </div>
        </div>
@@ -1476,11 +1455,11 @@
                 </div>
             </div>
             <div class="call-actions">
-                <button class="btn" id="startCallBtn">Start Call</button>
-                <button class="btn" id="muteAudioBtn">Mute Audio</button>
-                <button class="btn" id="muteVideoBtn">Mute Video</button>
-                <button class="btn btn-sos" id="endCallBtn">End Call</button>
-            </div>
+    <button class="btn" id="startCallBtn" data-key="start_call">Start Call</button>
+    <button class="btn" id="muteAudioBtn" data-key="mute_audio">Mute Audio</button>
+    <button class="btn" id="muteVideoBtn" data-key="mute_video">Mute Video</button>
+    <button class="btn btn-sos" id="endCallBtn" data-key="end_call">End Call</button>
+</div>
             <div id="connectionStatus" style="text-align: center; margin-top: 1rem; padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.1); display: none;">
                 <span id="statusText">Connecting...</span>
             </div>
@@ -2557,6 +2536,9 @@ langMenu.addEventListener('click', async (e) => {
 
         // 3. Re-build any other dynamic UI (like the cart modal, if it's open)
         updateCartModal();
+        // --- ADD THESE TWO LINES ---
+    await loadChatHistory();
+    await checkMedicineReminders();
 
         console.log("UI refresh complete.");
     } 
