@@ -2505,7 +2505,58 @@ function showScreen(screenId) {
                 Object.keys(translations).forEach(lang => { const option = document.createElement('a'); option.href = "#"; option.className = 'language-option'; option.dataset.lang = lang; option.textContent = new Intl.DisplayNames([lang], { type: 'language' }).of(lang); langMenu.appendChild(option); });
                 langDropdown.querySelector('.language-dropdown-toggle').addEventListener('click', () => langDropdown.classList.toggle('open'));
                 document.addEventListener('click', e => { if (!langDropdown.contains(e.target)) langDropdown.classList.remove('open'); });
-                langMenu.addEventListener('click', e => { if (e.target.classList.contains('language-option')) { currentLanguage = e.target.dataset.lang; document.getElementById('selectedLanguage').textContent = e.target.textContent; localStorage.setItem('userLanguage', currentLanguage); updateUIText(); langDropdown.classList.remove('open'); } });
+                // REPLACE your old listener with this new 'async' one
+langMenu.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('language-option')) {
+        const newLang = e.target.dataset.lang;
+
+        // --- Do nothing if the language is already selected ---
+        if (newLang === currentLanguage) {
+            langDropdown.classList.remove('open');
+            return; 
+        }
+
+        // --- Set the new language ---
+        currentLanguage = newLang; 
+        document.getElementById('selectedLanguage').textContent = e.target.textContent; 
+        localStorage.setItem('userLanguage', currentLanguage); 
+        langDropdown.classList.remove('open'); 
+
+        console.log(`Language changed to: ${currentLanguage}. Refreshing all UI components...`);
+
+        // --- This is the new, critical part ---
+        
+        // 1. Update all STATIC text (navbar, page titles)
+        updateUIText(); 
+
+        // 2. Re-build all DYNAMIC content
+        
+        // Re-build homepage dashboard cards
+        await loadDashboard(); 
+
+        // Re-build the appointments list (Upcoming, Past, Demo)
+        await generateAppointments(); 
+
+        // Re-build the prescriptions list
+        await generateAllPrescriptions();
+
+        // Re-build the medicine order history list
+        await loadOrderHistory();  
+
+        // Re-build the booking screen (resetting to step 1 is easiest)
+        renderBookingStep(1); 
+
+        // Re-build the reminders screen (but only if we are on that page)
+        if (document.getElementById('medicineRemindersScreen').classList.contains('active')) {
+            await loadMedicineRemindersScreen();
+        }
+
+        // 3. Re-build any other dynamic UI (like the cart modal, if it's open)
+        updateCartModal();
+
+        console.log("UI refresh complete.");
+    } 
+});
             }
 
             function generateTimeline() { document.getElementById('timeline-container').innerHTML = appData.records.map(rec => `<div class="timeline-item"><div class="timeline-dot"></div><p class="timeline-date">${new Date(rec.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</p><div class="card"><h4>${rec.title}</h4><p>${rec.description}</p></div></div>`).join(''); }
