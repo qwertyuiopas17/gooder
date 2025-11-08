@@ -1832,6 +1832,15 @@ en: {
     save_reminder: "Save Reminder",
     update_reminder: "Update Reminder",
     cancel: "Cancel",
+    med_desc_paracetamol: "Effective pain relief and fever reducer",
+    med_desc_ibuprofen: "Anti-inflammatory pain relief",
+    med_desc_crocin: "Advanced pain relief formula",
+    med_desc_cetirizine: "Allergy relief and antihistamine",
+    med_desc_grilinctus: "Effective cough suppressant",
+    med_desc_vicks: "Multi-symptom cold relief",
+    med_desc_digene: "Fast relief from acidity and gas",
+    med_desc_pudin_hara: "Ayurvedic digestive relief",
+    med_desc_eno: "Instant relief from acidity",
     
     // --- Upload Prescription Modal ---
     add_offline_prescription_title: "Add Offline Prescription",
@@ -2125,6 +2134,16 @@ hi: {
     save_reminder: "रिमाइंडर सहेजें",
     update_reminder: "रिमाइंडर अपडेट करें",
     cancel: "रद्द करें",
+
+    med_desc_paracetamol: "प्रभावी दर्द निवारक और बुखार कम करने वाली",
+    med_desc_ibuprofen: "सूजन-रोधी दर्द निवारक",
+    med_desc_crocin: "उन्नत दर्द निवारक फार्मूला",
+    med_desc_cetirizine: "एलर्जी से राहत और एंटीहिस्टामाइन",
+    med_desc_grilinctus: "प्रभावी खांसी दमनकारी",
+    med_desc_vicks: "बहु-लक्षण सर्दी से राहत",
+    med_desc_digene: "एसिडिटी और गैस से तुरंत राहत",
+    med_desc_pudin_hara: "आयुर्वेदिक पाचन राहत",
+    med_desc_eno: "एसिडिटी से तुरंत राहत",
     
     // --- Upload Prescription Modal ---
     add_offline_prescription_title: "ऑफ़लाइन नुस्खा जोड़ें",
@@ -2282,19 +2301,19 @@ async function triggerSos(user) {
                 // START: REPLACE YOUR OLD 'medicines' ARRAY WITH THIS OBJECT
     medicines: {
         'pain-fever': [
-            {id: 1, name: "Paracetamol (500mg)", price: 25.00, description: "Effective pain relief and fever reducer"},
-            {id: 2, name: "Ibuprofen (400mg)", price: 35.00, description: "Anti-inflammatory pain relief"},
-            {id: 3, name: "Crocin Pain Relief", price: 45.00, description: "Advanced pain relief formula"}
+            {id: 1, name: "Paracetamol (500mg)", price: 25.00, description: "med_desc_paracetamol"},
+            {id: 2, name: "Ibuprofen (400mg)", price: 35.00, description: "med_desc_ibuprofen"},
+            {id: 3, name: "Crocin Pain Relief", price: 45.00, description: "med_desc_crocin"}
         ],
         'cough-cold': [
-            {id: 4, name: "Cetirizine (10mg)", price: 18.00, description: "Allergy relief and antihistamine"},
-            {id: 5, name: "Grilinctus Cough Syrup (100ml)", price: 85.00, description: "Effective cough suppressant"},
-            {id: 6, name: "Vicks Action 500 Advanced", price: 55.00, description: "Multi-symptom cold relief"}
+            {id: 4, name: "Cetirizine (10mg)", price: 18.00, description: "med_desc_cetirizine"},
+            {id: 5, name: "Grilinctus Cough Syrup (100ml)", price: 85.00, description: "med_desc_grilinctus"},
+            {id: 6, name: "Vicks Action 500 Advanced", price: 55.00, description: "med_desc_vicks"}
         ],
         'stomach': [
-            {id: 7, name: "Digene Antacid Gel", price: 65.00, description: "Fast relief from acidity and gas"},
-            {id: 8, name: "Pudin Hara Pearls", price: 45.00, description: "Ayurvedic digestive relief"},
-            {id: 9, name: "Eno Fruit Salt", price: 15.00, description: "Instant relief from acidity"}
+            {id: 7, name: "Digene Antacid Gel", price: 65.00, description: "med_desc_digene"},
+            {id: 8, name: "Pudin Hara Pearls", price: 45.00, description: "med_desc_pudin_hara"},
+            {id: 9, name: "Eno Fruit Salt", price: 15.00, description: "med_desc_eno"}
         ]
     },
     
@@ -2511,6 +2530,12 @@ langMenu.addEventListener('click', async (e) => {
         
         // 1. Update all STATIC text (navbar, page titles)
         updateUIText(); 
+        // --- ADD THIS NEW BLOCK ---
+    // This manually re-translates the dynamic text on the medicine screen
+    if (selectedPharmacy) {
+        document.getElementById('selectedPharmacyName').textContent = getText('ordering_from', { name: selectedPharmacy.name });
+        document.getElementById('changePharmacyBtn').textContent = getText('change');
+    }
 
         // 2. Re-build all DYNAMIC content
         
@@ -3214,7 +3239,7 @@ function setupBookMedicine() {
             <div class="medicine-card card">
                 <div class="medicine-name">${med.name}</div>
                 <div class="medicine-price">₹${med.price.toFixed(2)}</div>
-                <div class="medicine-description">${med.description}</div>
+                <div class="medicine-description">${getText(med.description)}</div>
                 <div class="quantity-selector">
                     <button class="quantity-btn" data-action="decrease" data-med-id="${med.id}">-</button>
                     <input type="number" class="quantity-input" data-med-id="${med.id}" value="1" min="1" max="99" readonly>
