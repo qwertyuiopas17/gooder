@@ -1144,7 +1144,7 @@
                     <div class="page-header"><h1 data-key="scan_medicine_title">Scan Medicine</h1></div>
                     <div class="card camera-container">
                         <video id="camera-feed" playsinline></video>
-                        <p id="camera-status">Click "Open Camera" to start scanning</p>
+                        <p id="camera-status" data-key="camera_status_default">Click "Open Camera" to start scanning</p>
                         <div style="display: flex; gap: 1rem;">
                             <button id="openCameraBtn" class="btn btn-primary">Open Camera</button>
                             <button id="scanCodeBtn" class="btn" disabled>Scan QR Code</button>
@@ -1417,12 +1417,12 @@
                     <div class="card chatbot-container">
                         <div class="chat-window" id="chatWindow"></div>
                             <form class="chat-input" id="chatForm">
-                            <input type="text" id="chatInput" class="form-control" placeholder="Ask about symptoms, dosage...">
-                            
-                            <button type="button" class="btn" id="record-button" style="min-width: 50px;">🎤</button>
-                            
-                            <button type="submit" class="btn btn-primary">Send</button>
-                        </form>
+    <input type="text" id="chatInput" class="form-control" data-key="chatbot_placeholder" placeholder="Ask about symptoms, dosage...">
+
+    <button type="button" class="btn" id="record-button" style="min-width: 50px;">🎤</button>
+
+    <button type="submit" class="btn btn-primary" data-key="send">Send</button>
+</form>
                     </div>
                 </section>
             </main>
@@ -1449,13 +1449,22 @@
     </div>
     <div id="sosCountdownModal" class="modal">
     <div class="modal-content" style="text-align: center;">
-        <h3>🚨 EMERGENCY ACTIVATION</h3>
-        <p id="countdownText">Activating emergency services in 5 seconds...</p>
+        <h3 data-key="sos_title">🚨 EMERGENCY ACTIVATION</h3>
+        <p id="countdownText" data-key="sos_countdown_text" data-variables='{"seconds": 5}'>Activating emergency services in 5 seconds...</p>
         <div id="countdownNumber" style="font-size: 3rem; font-weight: bold; color: var(--sos-color); margin: 1rem 0;">5</div>
-        <button class="btn" id="cancelCountdown" style="background: #ef4444; color: white;">Cancel Emergency</button>
+        <button class="btn" id="cancelCountdown" style="background: #ef4444; color: white;" data-key="sos_cancel">Cancel Emergency</button>
     </div>
 </div>
-    <div id="sosModal" class="modal"><div class="modal-content"><h3>Emergency SOS</h3><p>This will call emergency services and send your location. Are you sure?</p><div class="modal-actions"><button class="btn" id="cancelSos">Cancel</button><button class="btn btn-sos" id="confirmSos">Confirm</button></div></div></div>
+   <div id="sosModal" class="modal">
+    <div class="modal-content">
+        <h3 data-key="sos_confirm_title">Emergency SOS</h3>
+        <p data-key="sos_confirm_msg">This will call emergency services and send your location. Are you sure?</p>
+        <div class="modal-actions">
+            <button class="btn" id="cancelSos" data-key="sos_confirm_cancel">Cancel</button>
+            <button class="btn btn-sos" id="confirmSos" data-key="sos_confirm_ok">Confirm</button>
+        </div>
+    </div>
+</div>
     <div id="prescriptionModal" class="modal"><div class="modal-content prescription-content" id="prescriptionModalContent"></div></div>
     <div id="callScreen" class="call-screen">
         <div class="call-content">
@@ -1495,21 +1504,21 @@
         </div>
     </div>
     <div id="uploadPrescriptionModal" class="modal">
-        <div class="modal-content">
-            <h3>Add Offline Prescription</h3>
-            <div class="form-group">
-                <label for="providerName">Provider Name</label>
-                <input type="text" id="providerName" class="form-control" placeholder="e.g., Local Store">
-            </div>
-            <video id="uploadCameraFeed" playsinline style="width: 100%; max-width: 500px; border-radius: var(--radius-lg); background: #333; aspect-ratio: 4 / 3;"></video>
-            <p id="uploadCameraStatus">Click "Open Camera" to start scanning</p>
-            <div style="display: flex; gap: 1rem;">
-                <button id="openUploadCameraBtn" class="btn btn-primary">Open Camera</button>
-                <button id="capturePrescriptionBtn" class="btn" disabled>Save Prescription</button>
-            </div>
-            <button class="btn" id="closeUploadModal" style="margin-top: 1rem;">Close</button>
+    <div class="modal-content">
+        <h3 data-key="add_offline_prescription_title">Add Offline Prescription</h3>
+        <div class="form-group">
+            <label for="providerName" data-key="provider_name">Provider Name</label>
+            <input type="text" id="providerName" class="form-control" data-key="provider_name_placeholder" placeholder="e.g., Local Store">
         </div>
+        <video id="uploadCameraFeed" playsinline style="width: 100%; max-width: 500px; border-radius: var(--radius-lg); background: #333; aspect-ratio: 4 / 3;"></video>
+        <p id="uploadCameraStatus" data-key="camera_status_default">Click "Open Camera" to start scanning</p>
+        <div style="display: flex; gap: 1rem;">
+            <button id="openUploadCameraBtn" class="btn btn-primary" data-key="open_camera">Open Camera</button>
+            <button id="capturePrescriptionBtn" class="btn" data-key="save_prescription" disabled>Save Prescription</button>
+        </div>
+        <button class="btn" id="closeUploadModal" style="margin-top: 1rem;" data-key="close">Close</button>
     </div>
+</div>
     <div id="medicineReminderModal" class="modal">
         <form class="modal-content" id="medicineReminderForm"> <h3>Add Medicine Reminder</h3>
             <div class="form-group">
@@ -1939,7 +1948,14 @@ en: {
     add_offline_prescription_title: "Add Offline Prescription",
     provider_name: "Provider Name",
     provider_name_placeholder: "e.g., Local Store",
-    save_prescription: "Save Prescription"
+    save_prescription: "Save Prescription",
+    // Add these keys inside 'en'
+"General Physician": "General Physician",
+"Dermatologist": "Dermatologist",
+"Child Specialist": "Child Specialist",
+"Video": "Video",
+"Audio": "Audio",
+"Offline": "Offline"
 },
 hi: {
     // --- Nav & Header ---
@@ -2225,9 +2241,46 @@ hi: {
     add_offline_prescription_title: "ऑफ़लाइन नुस्खा जोड़ें",
     provider_name: "प्रदाता का नाम",
     provider_name_placeholder: "जैसे, स्थानीय स्टोर",
-    save_prescription: "नुस्खा सहेजें"
+    save_prescription: "नुस्खा सहेजें",
+    // Add these keys inside 'hi'
+"General Physician": "सामान्य चिकित्सक",
+"Dermatologist": "त्वचा विशेषज्ञ",
+"Child Specialist": "बाल विशेषज्ञ",
+"Video": "वीडियो",
+"Audio": "ऑडियो",
+"Offline": "ऑफलाइन"
 }
             };
+            // PASTE THE 'getText' FUNCTION RIGHT HERE
+    /**
+     * Gets a translated string from the translations object.
+     * @param {string} key - The key for the translation (e.g., 'welcome_message').
+     * @param {object} [variables={}] - An object of variables to replace (e.g., { name: 'Rohan' }).
+     */
+    function getText(key, variables = {}) {
+        // Default to English if the current language isn't found
+        const langObject = translations[currentLanguage] || translations.en;
+        
+        let text = langObject[key];
+        
+        if (!text) {
+            // Fallback to English if the key is missing in the current language
+            text = translations.en[key];
+            if (!text) {
+                // If the key is missing entirely, return the key itself
+                // This makes it VERY obvious what translation is missing.
+                console.warn(`Translation key not found: ${key}`);
+                return key;
+            }
+        }
+        
+        // Replace all variables like {name} or {count}
+        for (const variableName in variables) {
+            text = text.replace(new RegExp(`\\{${variableName}\\}`, 'g'), variables[variableName]);
+        }
+        
+        return text;
+    }
 
             const appData = {
                 records: [ { date: "2025-09-15", title: "Consultation with Dr. Priya Sharma", description: "Follow-up regarding skin rash. Prescription for ointment updated." }, { date: "2025-08-02", title: "Blood Test Report Uploaded", description: "Complete Blood Count (CBC) report added." } ],
@@ -2294,36 +2347,7 @@ hi: {
             console.error('Failed to load chat history:', error);
         }
     }
-    // ADD THIS FUNCTION NEAR THE TOP OF YOUR SCRIPT
-/**
- * Gets a translated string from the translations object.
- * @param {string} key - The key for the translation (e.g., 'welcome_message').
- * @param {object} [variables={}] - An object of variables to replace (e.g., { name: 'Rohan' }).
- */
-function getText(key, variables = {}) {
-    // Default to English if the current language isn't found
-    const langObject = translations[currentLanguage] || translations.en;
-    
-    let text = langObject[key];
-    
-    if (!text) {
-        // Fallback to English if the key is missing in the current language
-        text = translations.en[key];
-        if (!text) {
-            // If the key is missing entirely, return the key itself
-            // This makes it VERY obvious what translation is missing.
-            console.warn(`Translation key not found: ${key}`);
-            return key;
-        }
-    }
-    
-    // Replace all variables like {name} or {count}
-    for (const variableName in variables) {
-        text = text.replace(new RegExp(`\\{${variableName}\\}`, 'g'), variables[variableName]);
-    }
-    
-    return text;
-}
+
             async function loadDoctors() {
                 try {
                     const response = await fetch(`${API_BASE_URL}/v1/doctors`);
@@ -2486,131 +2510,162 @@ function showScreen(screenId) {
 
             function generateTimeline() { document.getElementById('timeline-container').innerHTML = appData.records.map(rec => `<div class="timeline-item"><div class="timeline-dot"></div><p class="timeline-date">${new Date(rec.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</p><div class="card"><h4>${rec.title}</h4><p>${rec.description}</p></div></div>`).join(''); }
 
-            async function generateAppointments() {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/v1/appointments?userId=${user.patientId}`);
-                    const data = await response.json();
-                    if (data.success && data.appointments) {
-                        appData.appointments = data.appointments.map(appt => ({
-                            // --- CORRECTED CODE ---
-                            // Keep the original, full dateTime string for accurate comparisons
-                            dateTime: appt.dateTime, 
-                            // --- END OF CORRECTION ---
-                            id: appt.id,
-                            doctor: appt.doctorName,
-                            type: appt.specialization,
-                            date: new Date(appt.dateTime).toISOString().split('T')[0],
-                            time: new Date(appt.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-                            mode: 'Video' // default
-                        }));
-                    } else {
-                        // Keep mock data if API fails
-                        appData.appointments = [
-                            { id: 1, doctor: "Anjali Verma", type: "General Physician", date: "2025-09-28", time: "04:30 PM", mode: "Video"},
-                            { id: 2, doctor: "Priya Sharma", type: "Child Specialist", date: "2025-09-15", time: "10:00 AM", mode: "Video", prescription: { medications: [{name: 'Paracetamol 500mg', dosage: '1 tablet thrice a day'}, {name: 'Azithromycin 250mg', dosage: '1 tablet daily'}] }},
-                            { id: 3, doctor: "Sameer Patel", type: "General Physician", date: "2025-09-20", time: "11:00 AM", mode: "Audio", prescription: { medications: [{name: 'Vitamin C 1000mg', dosage: '1 tablet daily'}] }}
-                        ];
-                    }
-                } catch (e) {
-                    console.error('Failed to load appointments:', e);
-                     // Keep mock data on network error
-                    appData.appointments = [
-                        { id: 1, doctor: "Anjali Verma", type: "General Physician", date: "2025-09-28", time: "04:30 PM", mode: "Video"},
-                        { id: 2, doctor: "Priya Sharma", type: "Child Specialist", date: "2025-09-15", time: "10:00 AM", mode: "Video", prescription: { medications: [{name: 'Paracetamol 500mg', dosage: '1 tablet thrice a day'}, {name: 'Azithromycin 250mg', dosage: '1 tablet daily'}] }},
-                        { id: 3, doctor: "Sameer Patel", type: "General Physician", date: "2025-09-20", time: "11:00 AM", mode: "Audio", prescription: { medications: [{name: 'Vitamin C 1000mg', dosage: '1 tablet daily'}] }}
-                    ];
-                }
-
-                const container = document.getElementById('appointments-container');
-                const now = new Date(); // Use the current actual date and time
-                // --- CORRECTED CODE ---
-                // Use the full dateTime property for an accurate comparison
-                const upcoming = appData.appointments.filter(a => new Date(a.dateTime) >= now).sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
-                const past = appData.appointments.filter(a => new Date(a.dateTime) < now).sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime));
-                // --- END OF CORRECTION ---
-                // --- NEW CODE TO UPDATE THE HOME SCREEN ---
-                const nextAppointmentCard = document.querySelector('#homeScreen .info-card');
-                if (nextAppointmentCard) {
-                    const highlightEl = nextAppointmentCard.querySelector('.highlight');
-                    const doctorNameEl = nextAppointmentCard.querySelector('p:last-of-type');
-
-                    if (upcoming.length > 0) {
-                        const nextAppt = upcoming[0];
-                        const apptDate = new Date(nextAppt.date);
-                        const today = new Date();
-                        let dateString;
-
-                        if (apptDate.toDateString() === today.toDateString()) {
-                            dateString = `Today, ${nextAppt.time}`;
-                        } else {
-                            dateString = `${apptDate.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}, ${nextAppt.time}`;
-                        }
-                        
-                        highlightEl.textContent = dateString;
-                        doctorNameEl.textContent = nextAppt.doctor;
-                    } else {
-                        highlightEl.textContent = 'No upcoming appointments';
-                        doctorNameEl.textContent = 'You can book a new one anytime.';
-                    }
-                }
-                // --- END OF NEW CODE ---
-                
-                // --- NEW CODE FOR DEMO APPOINTMENT ---
-                const demoCallHtml = `
-                    <div class="card appointment-card" style="border: 2px solid var(--primary-color-dark);">
-                        <div class="appointment-card-header">
-                            <div class="appointment-card-doctor">
-                                <h4>Live Demo Call</h4>
-                                <p>Test the Video Call Feature</p>
-                                <p>Available anytime for demonstration</p>
-                            </div>
-                            <span class="appointment-card-tag tag-video">Demo</span>
-                        </div>
-                        <div class="appointment-card-footer">
-    <div style="display: flex; gap: 0.75rem;">
-        <button class="btn call-doctor-btn">Call Doctor</button>
-        <button class="btn message-doctor-btn">Message Doctor</button>
-    </div>
-    <button class="btn btn-primary join-call-btn" data-doctor="Demo Doctor" data-appointment-id="demo-call-123">
-        Join Call Now
-    </button>
-</div>
-                    </div>
-                `;
-                // --- END OF NEW CODE ---
-
-                let html = `<h3 class="appointments-section-title">Upcoming</h3>`;
-                html += demoCallHtml; // Add the demo call to the top of the list
-            
-                html += upcoming.length ? upcoming.map(a => { const apptTime = new Date(`${a.date} ${a.time}`); const timeDiffMinutes = (apptTime - now) / 60000; const canJoin = timeDiffMinutes <= 10 && timeDiffMinutes >= -15; return `<div class="card appointment-card"><div class="appointment-card-header"><div class="appointment-card-doctor"><h4>${a.doctor}</h4><p>${a.type}</p><p>${new Date(a.date).toDateString()}, ${a.time}</p></div><span class="appointment-card-tag ${a.mode === 'Video' ? 'tag-video' : 'tag-audio'}">${a.mode}</span></div><div class="appointment-card-footer"><div style="display: flex; gap: 0.75rem;"><button class="btn call-doctor-btn">Call Doctor</button><button class="btn message-doctor-btn">Message Doctor</button></div><div style="display: flex; gap: 0.75rem;"><button class="btn" style="background: var(--color-secondary); color: var(--text-color);">Reschedule</button><button class="btn btn-primary join-call-btn" data-doctor="${a.doctor}" data-appointment-id="${a.id}" ${canJoin ? '' : 'disabled'}>Join Call</button></div></div></div>`; }).join('') : '<p>No upcoming appointments.</p>';
-                
-                html += `<h3 class="appointments-section-title" style="margin-top: 2rem;">Past</h3>`;
-                html += past.length ? past.map((a, index) => `<div class="card appointment-card"><div class="appointment-card-header"><div class="appointment-card-doctor"><h4>${a.doctor}</h4><p>${a.type}</p><p>${new Date(a.date).toDateString()}, ${a.time}</p></div><span class="appointment-card-tag ${a.mode === 'Video' ? 'tag-video' : 'tag-audio'}">${a.mode}</span></div><div class="appointment-card-footer">${a.prescription ? `<button class="btn btn-primary view-prescription-btn" data-past-index="${index}">View Prescription</button>` : ''}</div></div>`).join('') : '<p>No past appointments.</p>';
-
-                container.innerHTML = html;
-                container.querySelectorAll('.join-call-btn').forEach(btn => btn.addEventListener('click', (e) => showCallScreen(e.currentTarget.dataset.doctor, e.currentTarget.dataset.appointmentId)));
-                container.querySelectorAll('.view-prescription-btn').forEach(btn => btn.addEventListener('click', (e) => showPrescription(past[e.currentTarget.dataset.pastIndex])));
-            // ... existing event listeners for join-call-btn and view-prescription-btn
-
-container.querySelectorAll('.call-doctor-btn').forEach(btn => btn.addEventListener('click', () => {
-    const phoneNumber = '7003665342';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-        window.location.href = `tel:${phoneNumber}`;
-    } else {
-        window.open(`https://web.whatsapp.com/send?phone=${phoneNumber}`, '_blank');
+            // REPLACE your old 'generateAppointments' function
+async function generateAppointments() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/appointments?userId=${user.patientId}`);
+        const data = await response.json();
+        if (data.success && data.appointments) {
+            appData.appointments = data.appointments.map(appt => ({
+                dateTime: appt.dateTime, 
+                id: appt.id,
+                doctor: appt.doctorName,
+                type: appt.specialization,
+                date: new Date(appt.dateTime).toISOString().split('T')[0],
+                time: new Date(appt.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+                mode: 'Video' // default
+            }));
+        } else {
+            // Keep mock data if API fails
+            appData.appointments = [
+                { id: 1, doctor: "Anjali Verma", type: "General Physician", date: "2025-09-28", time: "04:30 PM", mode: "Video"},
+                { id: 2, doctor: "Priya Sharma", type: "Child Specialist", date: "2025-09-15", time: "10:00 AM", mode: "Video", prescription: { medications: [{name: 'Paracetamol 500mg', dosage: '1 tablet thrice a day'}, {name: 'Azithromycin 250mg', dosage: '1 tablet daily'}] }},
+                { id: 3, doctor: "Sameer Patel", type: "General Physician", date: "2025-09-20", time: "11:00 AM", mode: "Audio", prescription: { medications: [{name: 'Vitamin C 1000mg', dosage: '1 tablet daily'}] }}
+            ];
+        }
+    } catch (e) {
+        console.error('Failed to load appointments:', e);
+        // Keep mock data on network error
+        appData.appointments = [
+            { id: 1, doctor: "Anjali Verma", type: "General Physician", date: "2025-09-28", time: "04:30 PM", mode: "Video"},
+            { id: 2, doctor: "Priya Sharma", type: "Child Specialist", date: "2025-09-15", time: "10:00 AM", mode: "Video", prescription: { medications: [{name: 'Paracetamol 500mg', dosage: '1 tablet thrice a day'}, {name: 'Azithromycin 250mg', dosage: '1 tablet daily'}] }},
+            { id: 3, doctor: "Sameer Patel", type: "General Physician", date: "2025-09-20", time: "11:00 AM", mode: "Audio", prescription: { medications: [{name: 'Vitamin C 1000mg', dosage: '1 tablet daily'}] }}
+        ];
     }
-}));
-container.querySelectorAll('.message-doctor-btn').forEach(btn => btn.addEventListener('click', () => {
-    const phoneNumber = '7003665342';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-        window.location.href = `sms:${phoneNumber}`;
-    } else {
-        window.open(`https://web.whatsapp.com/send?phone=${phoneNumber}`, '_blank');
-    }
-}));
+
+    const container = document.getElementById('appointments-container');
+    const now = new Date(); // Use the current actual date and time
+    const upcoming = appData.appointments.filter(a => new Date(a.dateTime) >= now).sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+    const past = appData.appointments.filter(a => new Date(a.dateTime) < now).sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime));
+
+    const nextAppointmentCard = document.querySelector('#homeScreen .info-card');
+    if (nextAppointmentCard) {
+        const highlightEl = nextAppointmentCard.querySelector('.highlight');
+        const doctorNameEl = nextAppointmentCard.querySelector('p:last-of-type');
+
+        if (upcoming.length > 0) {
+            const nextAppt = upcoming[0];
+            const apptDate = new Date(nextAppt.date);
+            const today = new Date();
+            let dateString;
+
+            if (apptDate.toDateString() === today.toDateString()) {
+                dateString = getText('today_at_time', { time: nextAppt.time });
+            } else {
+                dateString = `${apptDate.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}, ${nextAppt.time}`;
             }
+            
+            highlightEl.textContent = dateString;
+            doctorNameEl.textContent = nextAppt.doctor;
+        } else {
+            highlightEl.textContent = getText('no_upcoming_appts');
+            doctorNameEl.textContent = getText('no_upcoming_appts_subtitle');
+        }
+    }
+    
+    // --- START REFACTORED SECTION ---
+    const demoCallHtml = `
+        <div class="card appointment-card" style="border: 2px solid var(--primary-color-dark);">
+            <div class="appointment-card-header">
+                <div class="appointment-card-doctor">
+                    <h4>${getText('demo_call_title')}</h4>
+                    <p>${getText('demo_call_subtitle')}</p>
+                    <p>${getText('demo_call_desc')}</p>
+                </div>
+                <span class="appointment-card-tag tag-video">${getText('demo_call_tag')}</span>
+            </div>
+            <div class="appointment-card-footer">
+                <div style="display: flex; gap: 0.75rem;">
+                    <button class="btn call-doctor-btn">${getText('call_doctor')}</button>
+                    <button class="btn message-doctor-btn">${getText('message_doctor')}</button>
+                </div>
+                <button class="btn btn-primary join-call-btn" data-doctor="Demo Doctor" data-appointment-id="demo-call-123">
+                    ${getText('join_call_now')}
+                </button>
+            </div>
+        </div>
+    `;
+
+    let html = `<h3 class="appointments-section-title">${getText('upcoming')}</h3>`;
+    html += demoCallHtml; // Add the demo call to the top of the list
+    
+    html += upcoming.length ? upcoming.map(a => { 
+        const apptTime = new Date(`${a.date} ${a.time}`); 
+        const timeDiffMinutes = (apptTime - now) / 60000; 
+        const canJoin = timeDiffMinutes <= 10 && timeDiffMinutes >= -15; 
+        return `<div class="card appointment-card">
+                    <div class="appointment-card-header">
+                        <div class="appointment-card-doctor">
+                            <h4>${a.doctor}</h4>
+                            <p>${a.type}</p>
+                            <p>${new Date(a.date).toDateString()}, ${a.time}</p>
+                        </div>
+                        <span class="appointment-card-tag ${a.mode === 'Video' ? 'tag-video' : 'tag-audio'}">${a.mode}</span>
+                    </div>
+                    <div class="appointment-card-footer">
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button class="btn call-doctor-btn">${getText('call_doctor')}</button>
+                            <button class="btn message-doctor-btn">${getText('message_doctor')}</button>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button class="btn" style="background: var(--color-secondary); color: var(--text-color);">${getText('reschedule')}</button>
+                            <button class="btn btn-primary join-call-btn" data-doctor="${a.doctor}" data-appointment-id="${a.id}" ${canJoin ? '' : 'disabled'}>${getText('join_call')}</button>
+                        </div>
+                    </div>
+                </div>`; 
+    }).join('') : `<p>${getText('no_upcoming_appts')}</p>`;
+    
+    html += `<h3 class="appointments-section-title" style="margin-top: 2rem;">${getText('past')}</h3>`;
+    html += past.length ? past.map((a, index) => 
+        `<div class="card appointment-card">
+            <div class="appointment-card-header">
+                <div class="appointment-card-doctor">
+                    <h4>${a.doctor}</h4>
+                    <p>${a.type}</p>
+                    <p>${new Date(a.date).toDateString()}, ${a.time}</p>
+                </div>
+                <span class="appointment-card-tag ${a.mode === 'Video' ? 'tag-video' : 'tag-audio'}">${a.mode}</span>
+            </div>
+            <div class="appointment-card-footer">
+                ${a.prescription ? `<button class="btn btn-primary view-prescription-btn" data-past-index="${index}">${getText('view_prescription')}</button>` : ''}
+            </div>
+        </div>`
+    ).join('') : `<p>${getText('no_past_appts')}</p>`;
+    // --- END REFACTORED SECTION ---
+
+    container.innerHTML = html;
+    container.querySelectorAll('.join-call-btn').forEach(btn => btn.addEventListener('click', (e) => showCallScreen(e.currentTarget.dataset.doctor, e.currentTarget.dataset.appointmentId)));
+    container.querySelectorAll('.view-prescription-btn').forEach(btn => btn.addEventListener('click', (e) => showPrescription(past[e.currentTarget.dataset.pastIndex])));
+    
+    container.querySelectorAll('.call-doctor-btn').forEach(btn => btn.addEventListener('click', () => {
+        const phoneNumber = '7003665342';
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            window.location.href = `tel:${phoneNumber}`;
+        } else {
+            window.open(`https://web.whatsapp.com/send?phone=${phoneNumber}`, '_blank');
+        }
+    }));
+    container.querySelectorAll('.message-doctor-btn').forEach(btn => btn.addEventListener('click', () => {
+        const phoneNumber = '7003665342';
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            window.location.href = `sms:${phoneNumber}`;
+        } else {
+            window.open(`https://web.whatsapp.com/send?phone=${phoneNumber}`, '_blank');
+        }
+    }));
+}
             // REPLACE your old 'generateAllPrescriptions' function with this:
 async function generateAllPrescriptions() {
     const container = document.getElementById('prescriptions-container');
@@ -2751,30 +2806,48 @@ function showPrescriptionFromRecord(record) {
     document.getElementById('closePrescriptionModal').addEventListener('click', () => document.getElementById('prescriptionModal').classList.remove('active'), { once: true });
 }
 
-            function renderBookingStep(step) {
-                 document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
-                 const stepEl = document.getElementById(`bookingStep${step}`);
-                 if(stepEl) stepEl.classList.add('active');
-                 document.getElementById('prevStep').disabled = step === 1;
-                 document.getElementById('appointmentSummary').style.display = 'none';
+            // REPLACE your old 'renderBookingStep' function
+function renderBookingStep(step) {
+    document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
+    const stepEl = document.getElementById(`bookingStep${step}`);
+    if(stepEl) stepEl.classList.add('active');
+    document.getElementById('prevStep').disabled = step === 1;
+    document.getElementById('appointmentSummary').style.display = 'none';
 
-                 let grid, data, handler;
-                 if (step === 1) { grid = document.getElementById('categoryGrid'); data = appData.booking.categories; handler = (item) => { bookingState.category = item; renderBookingStep(2); }; grid.innerHTML = data.map(item => `<div class="selection-card card"><h4>${item}</h4></div>`).join(''); }
-                 else if (step === 2) { grid = document.getElementById('doctorGrid'); data = doctors.filter(d => d.specialization === bookingState.category); handler = (item) => { bookingState.doctorId = item.id; bookingState.doctor = item.name; renderBookingStep(3); }; grid.innerHTML = data.map(item => `<div class="doctor-card selection-card card"><img src="${item.img || 'https://placehold.co/100x100/0d9488/FFFFFF?text=Doc'}"><h4>${item.name}</h4><p>${item.languages}</p></div>`).join(''); }
-                 else if (step === 3) { generateCalendar(); document.getElementById('timeSlotsGrid').innerHTML = ''; }
-                 // --- ADDED THIS MISSING CODE BLOCK ---
-                 else if (step === 4) {
-                    grid = document.getElementById('modeGrid');
-                    data = appData.booking.modes;
-                    handler = (item) => {
-                        bookingState.mode = item;
-                        showSummary();
-                    };
-                    grid.innerHTML = data.map(item => `<div class="selection-card card"><h4>${item}</h4></div>`).join('');
-                 }
-                 // --- END OF ADDED CODE ---
-                 if (grid) { Array.from(grid.children).forEach((child, index) => { child.addEventListener('click', () => handler(data[index])); }); }
-            }
+    let grid, data, handler;
+    // --- START REFACTORED SECTION ---
+    if (step === 1) { 
+        grid = document.getElementById('categoryGrid'); 
+        data = appData.booking.categories; 
+        handler = (item) => { bookingState.category = item; renderBookingStep(2); }; 
+        // Translate the item as it's rendered
+        grid.innerHTML = data.map(item => `<div class="selection-card card"><h4>${getText(item)}</h4></div>`).join(''); 
+    }
+    else if (step === 2) { 
+        grid = document.getElementById('doctorGrid'); 
+        data = doctors.filter(d => d.specialization === bookingState.category); 
+        handler = (item) => { bookingState.doctorId = item.id; bookingState.doctor = item.name; renderBookingStep(3); }; 
+        // Doctor names/languages are dynamic from DB, so we don't translate them
+        grid.innerHTML = data.map(item => `<div class="doctor-card selection-card card"><img src="${item.img || 'https://placehold.co/100x100/0d9488/FFFFFF?text=Doc'}"><h4>${item.name}</h4><p>${item.languages}</p></div>`).join(''); 
+    }
+    else if (step === 3) { 
+        generateCalendar(); 
+        document.getElementById('timeSlotsGrid').innerHTML = ''; 
+    }
+    else if (step === 4) {
+        grid = document.getElementById('modeGrid');
+        data = appData.booking.modes;
+        handler = (item) => {
+            bookingState.mode = item;
+            showSummary();
+        };
+        // Translate the item as it's rendered
+        grid.innerHTML = data.map(item => `<div class="selection-card card"><h4>${getText(item)}</h4></div>`).join('');
+    }
+    // --- END REFACTORED SECTION ---
+
+    if (grid) { Array.from(grid.children).forEach((child, index) => { child.addEventListener('click', () => handler(data[index])); }); }
+}
              function generateCalendar() {
                 const daysGrid = document.getElementById('calendarDaysGrid');
                 const monthYearEl = document.getElementById('currentMonthYear');
