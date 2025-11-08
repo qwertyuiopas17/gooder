@@ -1032,22 +1032,22 @@
                               <p data-key="from_last_visit">From past visits</p>
                           </div>
                           <div id="medicineReminders" class="info-card card" style="cursor: pointer;">
-                              <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                      <div class="icon" style="background-image: linear-gradient(45deg, #ff6b6b, #ee5a52); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
-                                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-                                          </svg>
-                                      </div>
-                                      <span>Medicine Reminders</span>
-                                  </div>
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                      <path d="M9 18l6-6-6-6"></path>
-                                  </svg>
-                              </h3>
-                              <p class="highlight" id="pendingReminders">2 Pending</p>
-                              <p>Don't forget your medicines</p>
-                          </div>
+    <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="icon" style="background-image: linear-gradient(45deg, #ff6b6b, #ee5a52); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+            </div>
+            <span data-key="medicine_reminders">Medicine Reminders</span>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6"></path>
+        </svg>
+    </h3>
+    <p class="highlight" id="pendingReminders">2 Pending</p>
+    <p data-key="reminders_subtitle">Don't forget your medicines</p>
+</div>
                         <div data-screen="scanMedicineScreen" class="tool-card card">
                             <div class="icon" style="background-image: linear-gradient(45deg, #3b82f6, #60a5fa);">
                                 <!-- --- MODIFIED: Corrected viewBox --- -->
@@ -3288,7 +3288,7 @@ function setupBookMedicine() {
     };
 
     // Updates the content of the shopping cart modal
-    const updateCartModal = () => {
+    window.updateCartModal = () => {
         const cartItemsContainer = document.getElementById('cartItemsContainer');
         const cartTotalEl = document.getElementById('cartTotal');
         // --- NEW: Also translate modal title and buttons ---
