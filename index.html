@@ -440,8 +440,7 @@
         .hint-box {
             position: absolute;
             top: 100%; /* Below the parent item */
-            left: 50%; /* Centered on the parent item */
-            transform: translateX(-50%);
+            right: 0; /* --- CHANGED: Aligns to the right edge */
             margin-top: 12px; /* Space */
             background: var(--color-teal-700);
             color: var(--color-white);
@@ -459,8 +458,8 @@
         .hint-arrow {
             position: absolute;
             bottom: 100%; /* At the top of the box */
-            left: 50%;
-            transform: translateX(-50%);
+            right: 20px; /* --- CHANGED: Aligns arrow under the button */
+            transform: none; /* --- REMOVED: No longer need to center */
             width: 0; 
             height: 0; 
             border-left: 10px solid transparent;
@@ -482,32 +481,27 @@
         }
 
         @keyframes fadeInHint {
-            from { opacity: 0; transform: translateY(10px) translateX(-50%); }
-            to { opacity: 1; transform: translateY(0) translateX(-50%); }
+            from { opacity: 0; transform: translateY(10px); } /* --- CHANGED --- */
+            to { opacity: 1; transform: translateY(0); } /* --- CHANGED --- */
         }
 
         @media (max-width: 768px) {
             .hint-box {
-                top: 50%; /* Centered vertically */
-                left: 100%; /* To the right of the parent */
-                transform: translateY(-50%);
-                margin-top: 0;
-                margin-left: 12px; /* Space */
+                position: relative; /* --- CHANGED: Makes it flow in the menu */
+                top: auto;
+                left: auto;
+                transform: none;
+                margin-top: 8px; /* --- CHANGED: Space below language dropdown */
+                margin-left: 0;
+                width: 100%; /* --- CHANGED: Fits the menu width */
                 animation-name: fadeInHintMobile;
             }
             .hint-arrow {
-                bottom: auto; /* Reset */
-                top: 50%;
-                left: -10px; /* At the left edge of the box */
-                transform: translateY(-50%);
-                border-left: 0;
-                border-right: 10px solid var(--color-teal-700);
-                border-top: 10px solid transparent;
-                border-bottom: 10px solid transparent;
+                display: none; /* --- CHANGED: Hide arrow on mobile */
             }
             @keyframes fadeInHintMobile {
-                from { opacity: 0; transform: translateX(-10px) translateY(-50%); }
-                to { opacity: 1; transform: translateX(0) translateY(-50%); }
+                from { opacity: 0; transform: translateY(-10px); } /* --- CHANGED */
+                to { opacity: 1; transform: translateY(0); } /* --- CHANGED */
             }
         }
         /* --- END: Added Hint Box Styles --- */
