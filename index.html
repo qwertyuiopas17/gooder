@@ -474,16 +474,16 @@
             display: none; /* Hidden by default on all screens */
             position: absolute;
             top: 100%; 
-            left: 50%; /* --- CHANGED: Center relative to the wrapper */
-            transform: translateX(-50%); /* --- CHANGED: Center relative to the wrapper */
+            left: 0; /* --- CHANGED: Align to the left of the icon */
+            transform: none; /* --- CHANGED: No transform */
             margin-top: 12px; 
             background: var(--color-teal-700);
             color: var(--color-white);
-            padding: 10px 15px;
+            padding: 8px 12px; /* --- CHANGED: Made padding smaller */
             border-radius: var(--radius-base);
             box-shadow: var(--shadow-lg);
             z-index: 1001;
-            width: 220px;
+            width: 180px; /* --- CHANGED: Made box narrower */
             text-align: center;
             font-size: 14px;
             font-weight: 600;
@@ -491,8 +491,8 @@
         .hint-arrow-mobile-nav {
             position: absolute;
             bottom: 100%;
-            left: 50%; /* --- CHANGED: Center the arrow */
-            transform: translateX(-50%); /* --- CHANGED: Center the arrow */
+            left: 15px; /* --- CHANGED: Position arrow under the icon */
+            transform: none; /* --- CHANGED: No transform */
             width: 0; 
             height: 0; 
             border-left: 10px solid transparent;
@@ -1005,7 +1005,7 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         patient_id_is: "Your Patient ID is:",
         proceed_to_login: "Proceed to Login",
         lang_hint_message: "Select your language here to continue.",
-        mobile_menu_hint: "Click here to open the menu."
+        mobile_menu_hint: "Click to open menu."
     },
     hi: {
         sahara_logo: "सहारा साथी",
@@ -1077,7 +1077,7 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         patient_id_is: "आपकी रोगी आईडी है:",
         proceed_to_login: "लॉगिन करने के लिए आगे बढ़ें",
         lang_hint_message: "जारी रखने के लिए यहां अपनी भाषा चुनें।",
-        mobile_menu_hint: "मेनू खोलने के लिए यहां क्लिक करें।"
+        mobile_menu_hint: "मेनू खोलने के लिए क्लिक करें।"
     },
     pa: {
         sahara_logo: "ਸਹਾਰਾ ਸਾਥੀ",
@@ -1148,7 +1148,7 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         patient_id_is: "ਤੁਹਾਡਾ ਮਰੀਜ਼ ਆਈਡੀ ਹੈ:",
         proceed_to_login: "ਲਾਗਿਨ ਕਰਨ ਲਈ ਅੱਗੇ ਵਧੋ",
         lang_hint_message: "ਜਾਰੀ ਰੱਖਣ ਲਈ ਇੱਥੇ ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ।",
-        mobile_menu_hint: "ਮੀਨੂ ਖੋਲ੍ਹਣ ਲਈ ਇੱਥੇ ਕਲਿੱਕ ਕਰੋ।"
+        mobile_menu_hint: "ਮੀਨੂ ਲਈ ਕਲਿੱਕ ਕਰੋ।"
     }
 };
 
