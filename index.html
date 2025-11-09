@@ -437,10 +437,12 @@
         .auth-switch a:hover { text-decoration: underline; }
 
         /* --- START: Added Hint Box Styles --- */
+        /* --- START: Added Hint Box Styles --- */
         .hint-box {
             position: absolute;
             top: 100%; /* Below the parent item */
-            right: 0; /* --- CHANGED: Aligns to the right edge */
+            left: 50%; /* --- CHANGED: Centered on the parent item */
+            transform: translateX(-50%); /* --- CHANGED: Centered on the parent item */
             margin-top: 12px; /* Space */
             background: var(--color-teal-700);
             color: var(--color-white);
@@ -458,8 +460,8 @@
         .hint-arrow {
             position: absolute;
             bottom: 100%; /* At the top of the box */
-            right: 20px; /* --- CHANGED: Aligns arrow under the button */
-            transform: none; /* --- REMOVED: No longer need to center */
+            left: 50%; /* --- CHANGED: Centered */
+            transform: translateX(-50%); /* --- CHANGED: Centered */
             width: 0; 
             height: 0; 
             border-left: 10px solid transparent;
@@ -481,8 +483,8 @@
         }
 
         @keyframes fadeInHint {
-            from { opacity: 0; transform: translateY(10px); } /* --- CHANGED --- */
-            to { opacity: 1; transform: translateY(0); } /* --- CHANGED --- */
+            from { opacity: 0; transform: translateY(10px) translateX(-50%); } /* --- CHANGED */
+            to { opacity: 1; transform: translateY(0) translateX(-50%); } /* --- CHANGED */
         }
 
         @media (max-width: 768px) {
@@ -490,18 +492,18 @@
                 position: relative; /* --- CHANGED: Makes it flow in the menu */
                 top: auto;
                 left: auto;
-                transform: none;
-                margin-top: 8px; /* --- CHANGED: Space below language dropdown */
+                transform: none; /* --- CHANGED */
+                margin-top: 8px; 
                 margin-left: 0;
-                width: 100%; /* --- CHANGED: Fits the menu width */
+                width: 100%; 
                 animation-name: fadeInHintMobile;
             }
             .hint-arrow {
-                display: none; /* --- CHANGED: Hide arrow on mobile */
+                display: none; /* Hide arrow on mobile */
             }
             @keyframes fadeInHintMobile {
-                from { opacity: 0; transform: translateY(-10px); } /* --- CHANGED */
-                to { opacity: 1; transform: translateY(0); } /* --- CHANGED */
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
             }
         }
         /* --- END: Added Hint Box Styles --- */
@@ -590,12 +592,14 @@
                         <h2 data-key="sahara_logo">SAHARA SAATHI</h2>
                     </div>
                     <a href="#footer" id="contactBtn" class="btn" data-key="contact">Contact</a>
-                    <div class="language-dropdown">
-                        <button class="language-dropdown-toggle">
-                            <span id="selectedLanguage">English</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                        <div class="language-dropdown-menu">
+                    
+                    <div style="position: relative;"> 
+                        <div class="language-dropdown">
+                            <button class="language-dropdown-toggle">
+                                <span id="selectedLanguage">English</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                            <div class="language-dropdown-menu">
                             <a class="language-option" data-lang="en">English</a>
                             <a class="language-option" data-lang="hi">हिंदी</a>
                             <a class="language-option" data-lang="pa">ਪੰਜਾਬੀ</a>
@@ -611,9 +615,10 @@
                         </div>
                         </div>
                     <div id="langHint" class="hint-box">
-                        <button class="hint-close-btn" id="closeLangHint">&times;</button>
-                        <span data-key="lang_hint_message">Select your language here to continue.</span>
-                        <div class="hint-arrow"></div>
+                            <button class="hint-close-btn" id="closeLangHint">&times;</button>
+                            <span data-key="lang_hint_message">Select your language here to continue.</span>
+                            <div class="hint-arrow"></div>
+                        </div>
                     </div>
                     <button class="btn" id="installPwaBtnMobile" style="display: none;">Install App</button>
                 </div>
