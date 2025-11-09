@@ -3246,7 +3246,7 @@ function setupBookMedicine() {
     };
 
     // Renders medicine cards based on category or search results
-    const renderMedicines = (source, isSearchResult = false) => {
+    window.renderMedicines = (source, isSearchResult = false) => {
         const medicineGrid = document.getElementById('medicineGrid');
         let medicinesToShow = isSearchResult ? source : (appData.medicines[source] || []);
         
