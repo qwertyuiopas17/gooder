@@ -471,33 +471,39 @@
 
         /* --- START: Added Mobile Menu Hint Styles --- */
         .hint-box-mobile-nav {
-            display: none; /* Hidden by default on all screens */
+            display: none; /* Hidden by default */
             position: absolute;
-            top: 100%; 
-            left: 0; /* --- CHANGED: Align to the left of the icon */
-            transform: none; /* --- CHANGED: No transform */
-            margin-top: 12px; 
+            top: 50%; /* Vertically center */
+            left: 100%; /* Position to the right of the icon */
+            transform: translateY(-50%); /* Apply vertical centering */
+            margin-left: 12px; /* Space from icon */
             background: var(--color-teal-700);
             color: var(--color-white);
-            padding: 8px 12px; /* --- CHANGED: Made padding smaller */
+            padding: 8px 12px;
             border-radius: var(--radius-base);
             box-shadow: var(--shadow-lg);
             z-index: 1001;
-            width: 180px; /* --- CHANGED: Made box narrower */
+            width: 180px;
             text-align: center;
             font-size: 14px;
             font-weight: 600;
         }
         .hint-arrow-mobile-nav {
             position: absolute;
-            bottom: 100%;
-            left: 15px; /* --- CHANGED: Position arrow under the icon */
-            transform: none; /* --- CHANGED: No transform */
+            top: 50%;
+            right: 100%; /* At the left edge of the hint box */
+            transform: translateY(-50%);
             width: 0; 
             height: 0; 
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-bottom: 10px solid var(--color-teal-700);
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            border-right: 10px solid var(--color-teal-700); /* Pointing left */
+            border-left: 0;
+        }
+        /* New keyframe for this specific hint */
+        @keyframes fadeInHintMobileNav {
+            from { opacity: 0; transform: translateX(-10px) translateY(-50%); }
+            to { opacity: 1; transform: translateX(0) translateY(-50%); }
         }
         /* --- END: Added Mobile Menu Hint Styles --- */
         .hint-close-btn {
@@ -576,12 +582,11 @@
             ::-webkit-scrollbar {
                 display: none;
             }
-            /* --- START: MODIFIED THIS --- */
             .hint-box-mobile-nav {
                 display: block; /* Show it ONLY on mobile */
                 opacity: 0;
-                /* Use the main fadeInHint animation which includes the transform */
-                animation: fadeInHint 0.5s 1.5s forwards; 
+                /* Use the NEW animation */
+                animation: fadeInHintMobileNav 0.5s 1.5s forwards; 
             }
             .nav__brand h2 {
                 font-size: 1.25rem;
