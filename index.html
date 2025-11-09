@@ -474,8 +474,8 @@
             display: none; /* Hidden by default on all screens */
             position: absolute;
             top: 100%; 
-            left: 50%;
-            transform: translateX(-50%);
+            left: 50%; /* --- CHANGED: Center relative to the wrapper */
+            transform: translateX(-50%); /* --- CHANGED: Center relative to the wrapper */
             margin-top: 12px; 
             background: var(--color-teal-700);
             color: var(--color-white);
@@ -491,8 +491,8 @@
         .hint-arrow-mobile-nav {
             position: absolute;
             bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 50%; /* --- CHANGED: Center the arrow */
+            transform: translateX(-50%); /* --- CHANGED: Center the arrow */
             width: 0; 
             height: 0; 
             border-left: 10px solid transparent;
@@ -576,11 +576,12 @@
             ::-webkit-scrollbar {
                 display: none;
             }
+            /* --- START: MODIFIED THIS --- */
             .hint-box-mobile-nav {
                 display: block; /* Show it ONLY on mobile */
                 opacity: 0;
-                /* Use the existing mobile animation */
-                animation: fadeInHintMobile 0.5s 1.5s forwards; 
+                /* Use the main fadeInHint animation which includes the transform */
+                animation: fadeInHint 0.5s 1.5s forwards; 
             }
             .nav__brand h2 {
                 font-size: 1.25rem;
