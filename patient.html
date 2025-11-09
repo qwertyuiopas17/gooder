@@ -1216,15 +1216,17 @@
        </div>
 
        <div class="card">
-           <div class="form-group">
-               <label for="medicineSearch">Search for medicine</label>
-               <input type="search" id="medicineSearch" class="form-control" placeholder="e.g., Paracetamol">
+               <div class="form-group">
+                   <label for="medicineSearch" data-key="search_for_medicine">Search for medicine</label>
+                   
+                   <input type="search" id="medicineSearch" class="form-control" data-key="search_placeholder" placeholder="e.g., Paracetamol">
+               </div>
+               <div id="medicineDisplayContainer">
+                   <ul class="medicine-list" id="medicineList"></ul>
+               </div>
+               
+               <button id="checkoutBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" disabled data-key="checkout_btn" data-variables='{"count": 0}'>Checkout (0 items)</button>
            </div>
-           <div id="medicineDisplayContainer">
-               <ul class="medicine-list" id="medicineList"></ul>
-           </div>
-           <button id="checkoutBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" disabled>Checkout (0 items)</button>
-       </div>
    </div>
 </section>
 <section id="trackOrdersScreen" class="screen">
@@ -2530,14 +2532,10 @@ function showScreen(screenId) {
 langMenu.addEventListener('click', async (e) => {
     if (e.target.classList.contains('language-option')) {
         const newLang = e.target.dataset.lang;
-
-        // --- Do nothing if the language is already selected ---
         if (newLang === currentLanguage) {
             langDropdown.classList.remove('open');
             return; 
         }
-
-        // --- Set the new language ---
         currentLanguage = newLang; 
         document.getElementById('selectedLanguage').textContent = e.target.textContent; 
         localStorage.setItem('userLanguage', currentLanguage); 
@@ -2545,46 +2543,45 @@ langMenu.addEventListener('click', async (e) => {
 
         console.log(`Language changed to: ${currentLanguage}. Refreshing all UI components...`);
 
-        // --- This is the new, critical part ---
-        
-        // 1. Update all STATIC text (navbar, page titles)
+        // 1. Update all STATIC text (navbar, titles, search bar)
         updateUIText(); 
-        // --- ADD THIS NEW BLOCK ---
-    // This manually re-translates the dynamic text on the medicine screen
-    if (selectedPharmacy) {
-        document.getElementById('selectedPharmacyName').textContent = getText('ordering_from', { name: selectedPharmacy.name });
-        document.getElementById('changePharmacyBtn').textContent = getText('change');
-    }
 
-        // 2. Re-build all DYNAMIC content
-        
-        // Re-build homepage dashboard cards
+        // 2. Manually re-translate DYNAMIC text
+        // This fixes "Ordering from:" and "Change"
+        if (selectedPharmacy) {
+            document.getElementById('selectedPharmacyName').textContent = getText('ordering_from', { name: selectedPharmacy.name });
+            document.getElementById('changePharmacyBtn').textContent = getText('change');
+        }
+
+        // 3. Re-build DYNAMIC components
         await loadDashboard(); 
-
-        // Re-build the appointments list (Upcoming, Past, Demo)
         await generateAppointments(); 
-
-        // Re-build the prescriptions list
         await generateAllPrescriptions();
-
-        // Re-build the medicine order history list
         await loadOrderHistory();  
-
-        // Re-build the booking screen (resetting to step 1 is easiest)
         renderBookingStep(1); 
 
-        // Re-build the reminders screen (but only if we are on that page)
+        // 4. --- THIS IS THE FIX for your screenshot ---
+        // Re-draw all medicine cards with translated descriptions and buttons
+        if (window.renderMedicines) {
+             window.renderMedicines(document.querySelector('.category-card.selected')?.dataset.category || 'pain-fever');
+        }
+        // Re-translate the "Checkout (0 items)" button
+        if (window.updateCartIcon) {
+            window.updateCartIcon();
+        }
+        // --- END OF FIX ---
+
+        // 5. Update other screens
         if (document.getElementById('medicineRemindersScreen').classList.contains('active')) {
             await loadMedicineRemindersScreen();
         }
+        if (window.updateCartModal) {
+            window.updateCartModal();
+        }
 
-        // 3. Re-build any other dynamic UI (like the cart modal, if it's open)
-        updateCartModal();
-        
-
-        console.log("UI refresh complete.");
+        // 6. Re-load chat and reminder tile
         await loadChatHistory();
-    await checkMedicineReminders();
+        await checkMedicineReminders();
     } 
 });
             }
@@ -3273,7 +3270,7 @@ function setupBookMedicine() {
     };
 
     // Attaches event listeners to the quantity and "Add to Cart" buttons on medicine cards
-    const attachMedicineCardListeners = (medicineSource) => {
+    window.attachMedicineCardListeners = (medicineSource) => {
         const medicineGrid = document.getElementById('medicineGrid');
         medicineGrid.querySelectorAll('.quantity-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -3316,7 +3313,7 @@ function setupBookMedicine() {
         }
     };
 
-    const updateCartIcon = () => {
+    window.updateCartIcon = () => {
         const cartBadge = document.querySelector('.cart-badge');
         if (!cartBadge) return;
         const totalItems = medicineCart.reduce((sum, item) => sum + item.quantity, 0);
