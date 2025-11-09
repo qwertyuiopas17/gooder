@@ -811,6 +811,46 @@
         .message-input { display: flex; gap: 0.5rem; }
         #messageInput { flex-grow: 1; padding: 0.5rem; border-radius: 8px; border: none; }
 
+        /* --- START: Added Chat Hint Box Styles --- */
+        .hint-box-chat {
+            position: absolute;
+            bottom: 100px; /* Positioned above the input form */
+            right: 2.5rem; /* Aligned near the mic */
+            background: var(--primary-color-dark);
+            color: var(--color-white);
+            padding: 10px 15px;
+            border-radius: var(--radius-base);
+            box-shadow: var(--shadow-lg);
+            z-index: 10;
+            width: 220px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            pointer-events: none; /* So it doesn't block clicks */
+        }
+        .hint-arrow-chat {
+            position: absolute;
+            top: 100%; /* At the bottom of the box */
+            left: 85%; /* Aligned with the mic */
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid var(--primary-color-dark);
+        }
+
+        @media (max-width: 767px) {
+            .hint-box-chat {
+                right: 1.5rem; /* Match card padding */
+                width: calc(100% - 3rem); /* Full width minus padding */
+            }
+            .hint-arrow-chat {
+                left: 85%; /* Adjust arrow for mobile */
+            }
+        }
+        /* --- END: Added Chat Hint Box Styles --- */
+
         /* Responsive */
         @media (min-width: 768px) {
             .bottom-nav { display: none; }
@@ -1416,6 +1456,9 @@
                     <div class="page-header"><h1 data-key="health_chatbot_title">Health Assistant</h1></div>
                     <div class="card chatbot-container">
                         <div class="chat-window" id="chatWindow"></div>
+                        <div id="micHint" class="hint-box-chat" style="display: none;"> <span id="micHintText"></span>
+                            <div class="hint-arrow-chat"></div>
+                        </div>
                             <form class="chat-input" id="chatForm">
     <input type="text" id="chatInput" class="form-control" data-key="chatbot_placeholder" placeholder="Ask about symptoms, dosage...">
 
@@ -1874,7 +1917,9 @@ en: {
 "Child Specialist": "Child Specialist",
 "Video": "Video",
 "Audio": "Audio",
-"Offline": "Offline"
+"Offline": "Offline",
+mic_hint_press: "Press the mic to start", // <-- ADD THIS
+        mic_hint_stop: "Press again to stop" // <-- ADD THIS
 },
 hi: {
     // --- Nav & Header ---
@@ -2177,7 +2222,9 @@ hi: {
 "Child Specialist": "बाल विशेषज्ञ",
 "Video": "वीडियो",
 "Audio": "ऑडियो",
-"Offline": "ऑफलाइन"
+"Offline": "ऑफलाइन",
+mic_hint_press: "शुरू करने के लिए माइक दबाएं।", // <-- ADD THIS
+        mic_hint_stop: "रिकॉर्डिंग रोकने के लिए फिर से दबाएं।"
 }
             };
             // PASTE THE 'getText' FUNCTION RIGHT HERE
@@ -4512,53 +4559,90 @@ showGeneralHelpButtons() {
     let audioChunks = [];
     let isRecording = false;
 
-    // --- 1. NEW MediaRecorder LOGIC ---
-    recordButton.addEventListener('click', () => {
-        if (isRecording) {
-            // --- STOP RECORDING ---
-            mediaRecorder.stop();
-            isRecording = false;
-            recordButton.textContent = '🎤';
-            recordButton.disabled = false;
-            chatInput.disabled = false;
-        } else {
-            // --- START RECORDING ---
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); 
-                    mediaRecorder.start();
-                    isRecording = true;
-                    audioChunks = []; // Clear old chunks
-                    recordButton.textContent = '...'; // Show "listening"
-                    
-                    // --- THIS IS THE FIX ---
-                    // The button MUST remain enabled so you can click it to stop.
-                    recordButton.disabled = false; 
-                    // --- END OF FIX ---
+    // --- 1. NEW MediaRecorder LOGIC with CONTEXTUAL HINT ---
+                
+                // Get the hint elements
+                const micHint = document.getElementById('micHint');
+                const micHintText = document.getElementById('micHintText');
 
-                    chatInput.disabled = true;
+                // Show the initial hint if it hasn't been dismissed
+                if (!localStorage.getItem('micHintDismissed')) {
+                    micHintText.textContent = getText('mic_hint_press');
+                    micHint.style.display = 'block';
+                }
 
-                    mediaRecorder.addEventListener("dataavailable", event => {
-                        audioChunks.push(event.data);
-                    });
-
-                    mediaRecorder.addEventListener("stop", () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        sendVoiceToBackend(audioBlob);
-                        
-                        // Stop all audio tracks to turn off mic light
-                        stream.getTracks().forEach(track => track.stop());
-                    });
-                })
-                .catch(err => {
-                    console.error("Microphone error:", err);
-                    alert("Microphone access denied. Please allow microphone access in your browser settings.");
-                    recordButton.textContent = '🎤';
-                    recordButton.disabled = false;
-                    chatInput.disabled = false;
+                // Add a click listener to the chat window to dismiss the hint
+                chatWindow.addEventListener('click', () => {
+                    if (micHint.style.display !== 'none' && !isRecording) {
+                         micHint.style.display = 'none';
+                         localStorage.setItem('micHintDismissed', 'true');
+                    }
                 });
-        }
-    });
+
+                recordButton.addEventListener('click', () => {
+                    // Hide and dismiss the persistent hint on first click
+                    if (!localStorage.getItem('micHintDismissed')) {
+                         micHint.style.display = 'none';
+                         localStorage.setItem('micHintDismissed', 'true');
+                    }
+                    
+                    if (isRecording) {
+                        // --- STOP RECORDING ---
+                        mediaRecorder.stop();
+                        isRecording = false;
+                        recordButton.textContent = '🎤'; // Keep Mic icon
+                        recordButton.disabled = false;
+                        chatInput.disabled = false;
+                        
+                        // Hide contextual hint
+                        micHint.style.display = 'none';
+
+                    } else {
+                        // --- START RECORDING ---
+                        navigator.mediaDevices.getUserMedia({ audio: true })
+                            .then(stream => {
+                                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); 
+                                mediaRecorder.start();
+                                isRecording = true;
+                                audioChunks = []; // Clear old chunks
+                                
+                                // Keep Mic icon
+                                recordButton.textContent = '🎤'; 
+                                
+                                // Update and show contextual hint
+                                micHintText.textContent = getText('mic_hint_stop');
+                                micHint.style.display = 'block'; 
+
+                                recordButton.disabled = false; 
+                                chatInput.disabled = true;
+
+                                mediaRecorder.addEventListener("dataavailable", event => {
+                                    audioChunks.push(event.data);
+                                });
+
+                                mediaRecorder.addEventListener("stop", () => {
+                                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                                    sendVoiceToBackend(audioBlob);
+                                    
+                                    // Hide hint when sending
+                                    micHint.style.display = 'none'; 
+                                    
+                                    // Stop all audio tracks to turn off mic light
+                                    stream.getTracks().forEach(track => track.stop());
+                                });
+                            })
+                            .catch(err => {
+                                console.error("Microphone error:", err);
+                                alert("Microphone access denied. Please allow microphone access in your browser settings.");
+                                // Reset UI on error
+                                isRecording = false;
+                                recordButton.textContent = '🎤';
+                                recordButton.disabled = false;
+                                chatInput.disabled = false;
+                                micHint.style.display = 'none';
+                            });
+                    }
+                });
                 
                 // --- 2. NEW FUNCTION TO SEND VOICE TO BACKEND ---
                 // --- 2. REPLACE your old 'sendVoiceToBackend' function with this ---
