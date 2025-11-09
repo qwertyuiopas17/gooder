@@ -436,6 +436,82 @@
         .auth-switch a { color: var(--color-primary); font-weight: 600; cursor: pointer; text-decoration: none; }
         .auth-switch a:hover { text-decoration: underline; }
 
+        /* --- START: Added Hint Box Styles --- */
+        .hint-box {
+            position: absolute;
+            top: 100%; /* Below the parent item */
+            left: 50%; /* Centered on the parent item */
+            transform: translateX(-50%);
+            margin-top: 12px; /* Space */
+            background: var(--color-teal-700);
+            color: var(--color-white);
+            padding: 10px 15px;
+            border-radius: var(--radius-base);
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            width: 220px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0; /* Fade in */
+            animation: fadeInHint 0.5s 1.5s forwards; /* Fade in after 1.5s delay */
+        }
+        .hint-arrow {
+            position: absolute;
+            bottom: 100%; /* At the top of the box */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 10px solid var(--color-teal-700);
+        }
+        .hint-close-btn {
+            position: absolute;
+            top: 2px;
+            right: 5px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+        }
+
+        @keyframes fadeInHint {
+            from { opacity: 0; transform: translateY(10px) translateX(-50%); }
+            to { opacity: 1; transform: translateY(0) translateX(-50%); }
+        }
+
+        @media (max-width: 768px) {
+            .hint-box {
+                top: 50%; /* Centered vertically */
+                left: 100%; /* To the right of the parent */
+                transform: translateY(-50%);
+                margin-top: 0;
+                margin-left: 12px; /* Space */
+                animation-name: fadeInHintMobile;
+            }
+            .hint-arrow {
+                bottom: auto; /* Reset */
+                top: 50%;
+                left: -10px; /* At the left edge of the box */
+                transform: translateY(-50%);
+                border-left: 0;
+                border-right: 10px solid var(--color-teal-700);
+                border-top: 10px solid transparent;
+                border-bottom: 10px solid transparent;
+            }
+            @keyframes fadeInHintMobile {
+                from { opacity: 0; transform: translateX(-10px) translateY(-50%); }
+                to { opacity: 1; transform: translateX(0) translateY(-50%); }
+            }
+        }
+        /* --- END: Added Hint Box Styles --- */
+
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
             .nav {
@@ -539,6 +615,11 @@
                             <a class="language-option" data-lang="ta">Tamil</a>
                             <a class="language-option" data-lang="te">Telugu</a>
                         </div>
+                        </div>
+                    <div id="langHint" class="hint-box">
+                        <button class="hint-close-btn" id="closeLangHint">&times;</button>
+                        <span data-key="lang_hint_message">Select your language here to continue.</span>
+                        <div class="hint-arrow"></div>
                     </div>
                     <button class="btn" id="installPwaBtnMobile" style="display: none;">Install App</button>
                 </div>
@@ -877,7 +958,8 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         success_message: "Your account has been created.",
         login_info_message: "You can log in with your Full Name, Email, or the Patient ID below.",
         patient_id_is: "Your Patient ID is:",
-        proceed_to_login: "Proceed to Login"
+        proceed_to_login: "Proceed to Login",
+        lang_hint_message: "Select your language here to continue."
     },
     hi: {
         sahara_logo: "सहारा साथी",
@@ -947,7 +1029,8 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         success_message: "आपका खाता बना दिया गया है।",
         login_info_message: "आप अपने पूरे नाम, ईमेल, या नीचे दिए गए रोगी आईडी से लॉग इन कर सकते हैं।",
         patient_id_is: "आपकी रोगी आईडी है:",
-        proceed_to_login: "लॉगिन करने के लिए आगे बढ़ें"
+        proceed_to_login: "लॉगिन करने के लिए आगे बढ़ें",
+        lang_hint_message: "जारी रखने के लिए यहां अपनी भाषा चुनें।"
     },
     pa: {
         sahara_logo: "ਸਹਾਰਾ ਸਾਥੀ",
@@ -1016,7 +1099,8 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         success_message: "ਤੁਹਾਡਾ ਖਾਤਾ ਬਣ ਗਿਆ ਹੈ।",
         login_info_message: "ਤੁਸੀਂ ਆਪਣੇ ਪੂਰੇ ਨਾਮ, ਈਮੇਲ, ਜਾਂ ਹੇਠਾਂ ਦਿੱਤੇ ਮਰੀਜ਼ ਆਈਡੀ ਨਾਲ ਲਾਗਇਨ ਕਰ ਸਕਦੇ ਹੋ।",
         patient_id_is: "ਤੁਹਾਡਾ ਮਰੀਜ਼ ਆਈਡੀ ਹੈ:",
-        proceed_to_login: "ਲਾਗਿਨ ਕਰਨ ਲਈ ਅੱਗੇ ਵਧੋ"
+        proceed_to_login: "ਲਾਗਿਨ ਕਰਨ ਲਈ ਅੱਗੇ ਵਧੋ",
+        lang_hint_message: "ਜਾਰੀ ਰੱਖਣ ਲਈ ਇੱਥੇ ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ।"
     }
 };
 
@@ -1214,6 +1298,7 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         }
 
         const languageDropdown = document.querySelector('.language-dropdown');
+        const langHint = document.getElementById('langHint'); // <-- GET HINT
         if (languageDropdown) {
             const dropdownToggle = languageDropdown.querySelector('.language-dropdown-toggle');
             const languageOptions = languageDropdown.querySelectorAll('.language-option');
@@ -1221,13 +1306,33 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
 
             dropdownToggle.addEventListener('click', () => languageDropdown.classList.toggle('open'));
             document.addEventListener('click', (e) => { if (!languageDropdown.contains(e.target)) languageDropdown.classList.remove('open'); });
+            
+            // --- START: HINT LOGIC ---
+            if (localStorage.getItem('langHintDismissed')) {
+                langHint.style.display = 'none';
+            }
+            document.getElementById('closeLangHint').addEventListener('click', () => {
+                langHint.style.display = 'none';
+                localStorage.setItem('langHintDismissed', 'true');
+            });
+            // --- END: HINT LOGIC ---
+
             languageOptions.forEach(option => {
                 option.addEventListener('click', (e) => {
                     e.preventDefault();
                     currentLanguage = option.getAttribute('data-lang') || 'en';
+                    
+                    // --- START: SAVE TO LOCALSTORAGE ---
+                    localStorage.setItem('userLanguage', currentLanguage);
+                    // --- END: SAVE TO LOCALSTORAGE ---
+
                     selectedLanguageSpan.textContent = option.textContent;
                     updateUIText();
                     languageDropdown.classList.remove('open');
+                    
+                    // --- HIDE HINT ON SELECTION ---
+                    langHint.style.display = 'none';
+                    localStorage.setItem('langHintDismissed', 'true');
                 });
             });
         }
