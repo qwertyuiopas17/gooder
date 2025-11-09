@@ -139,6 +139,19 @@
     animation: pulse 1s infinite; 
     transform: scale(1.05); 
 }
+/* --- ADDED: Style for active recording button --- */
+        #record-button.recording-active,
+        #record-button.recording-active:hover {
+            background-color: var(--sos-color);
+            color: white; /* Ensure icon is visible */
+            border-color: var(--sos-color);
+            opacity: 1;
+        }
+        #record-button.recording-active:hover {
+            background-color: #dc2626; /* A slightly darker red */
+            border-color: #dc2626;
+        }
+        /* --- END ADDED --- */
         .btn-primary { background-color: var(--primary-color); color: white; border: 2px solid var(--primary-color); }
         
         .card { 
@@ -1417,7 +1430,7 @@
                     <div class="card chatbot-container">
                         <div class="chat-window" id="chatWindow"></div>
                             <form class="chat-input" id="chatForm">
-    <input type="text" id="chatInput" class="form-control" data-key="chatbot_placeholder" placeholder="Ask about symptoms, dosage...">
+    <input type="text" id="chatInput" class="form-control" data-key="chatbot_placeholder" placeholder="Ask about symptoms, dosage or press the 🎤 button ">
 
     <button type="button" class="btn" id="record-button" style="min-width: 50px;">🎤</button>
 
@@ -1755,6 +1768,7 @@ en: {
     chatbot_processing_voice: "... (Processing voice input) ...",
     chatbot_voice_error: "I'm sorry, I couldn't process your voice. Please try again.",
     chatbot_connect_error: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+    chatbot_record_hint: "Press again to stop recording and send ➔", // <-- ADD THIS
 
     // --- Call Screen ---
     call_with: "Consultation with {name}",
@@ -2059,6 +2073,7 @@ hi: {
     chatbot_processing_voice: "... (वॉयस इनपुट प्रोसेस हो रहा है) ...",
     chatbot_voice_error: "मुझे खेद है, मैं आपकी आवाज़ को प्रोसेस नहीं कर सका। कृपया पुनः प्रयास करें।",
     chatbot_connect_error: "मुझे खेद है, मुझे अभी कनेक्ट होने में समस्या हो रही है। कृपया कुछ देर बाद पुनः प्रयास करें।",
+    chatbot_record_hint: "रिकॉर्डिंग रोकने और भेजने के लिए फिर से दबाएँ ➔", // <-- ADD THIS
     
     // --- Call Screen ---
     call_with: "के साथ परामर्श {name}",
@@ -4511,6 +4526,7 @@ showGeneralHelpButtons() {
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
+    let originalPlaceholder = chatInput.placeholder; // Store the default placeholder
 
     // --- 1. NEW MediaRecorder LOGIC ---
     recordButton.addEventListener('click', () => {
@@ -4518,10 +4534,12 @@ showGeneralHelpButtons() {
             // --- STOP RECORDING ---
             mediaRecorder.stop();
             isRecording = false;
-            // --- MODIFIED: Show processing state ---
-            recordButton.textContent = '⚙️'; 
+           // --- MODIFIED: Show processing state & reset UI ---
+            recordButton.textContent = '⚙️';
             recordButton.disabled = true;
             chatInput.disabled = true; // Keep input disabled
+            recordButton.classList.remove('recording-active'); // Remove red color
+            chatInput.placeholder = originalPlaceholder; // Restore placeholder
             // --- END MODIFICATION ---
         } else {
             // --- START RECORDING ---
@@ -4531,7 +4549,10 @@ showGeneralHelpButtons() {
                     mediaRecorder.start();
                     isRecording = true;
                     audioChunks = []; // Clear old chunks
-                    recordButton.textContent = '■'; // Show "listening"
+                    recordButton.textContent = '■';
+                    recordButton.classList.add('recording-active'); // Make button red
+                    originalPlaceholder = chatInput.placeholder; // Save original placeholder
+                    chatInput.placeholder = getText('chatbot_record_hint'); // Show "listening"
                     
                     // --- THIS IS THE FIX ---
                     // The button MUST remain enabled so you can click it to stop.
@@ -4558,6 +4579,8 @@ showGeneralHelpButtons() {
                     recordButton.textContent = '🎤';
                     recordButton.disabled = false;
                     chatInput.disabled = false;
+                    chatInput.placeholder = originalPlaceholder; // Restore placeholder
+                    recordButton.classList.remove('recording-active'); // Just in case
                 });
         }
     });
