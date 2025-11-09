@@ -4518,9 +4518,11 @@ showGeneralHelpButtons() {
             // --- STOP RECORDING ---
             mediaRecorder.stop();
             isRecording = false;
-            recordButton.textContent = '🎤';
-            recordButton.disabled = false;
-            chatInput.disabled = false;
+            // --- MODIFIED: Show processing state ---
+            recordButton.textContent = '⚙️'; 
+            recordButton.disabled = true;
+            chatInput.disabled = true; // Keep input disabled
+            // --- END MODIFICATION ---
         } else {
             // --- START RECORDING ---
             navigator.mediaDevices.getUserMedia({ audio: true })
@@ -4529,7 +4531,7 @@ showGeneralHelpButtons() {
                     mediaRecorder.start();
                     isRecording = true;
                     audioChunks = []; // Clear old chunks
-                    recordButton.textContent = '...'; // Show "listening"
+                    recordButton.textContent = '■'; // Show "listening"
                     
                     // --- THIS IS THE FIX ---
                     // The button MUST remain enabled so you can click it to stop.
@@ -4607,6 +4609,8 @@ showGeneralHelpButtons() {
                 chatWindow.removeChild(typingIndicator); // This removes the indicator
             }
             // Re-enable buttons after processing
+            // --- MODIFIED: Reset icon and re-enable buttons ---
+            recordButton.textContent = '🎤';
             recordButton.disabled = false;
             chatInput.disabled = false;
         }
