@@ -468,6 +468,38 @@
             border-right: 10px solid transparent;
             border-bottom: 10px solid var(--color-teal-700);
         }
+
+        /* --- START: Added Mobile Menu Hint Styles --- */
+        .hint-box-mobile-nav {
+            display: none; /* Hidden by default on all screens */
+            position: absolute;
+            top: 100%; 
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 12px; 
+            background: var(--color-teal-700);
+            color: var(--color-white);
+            padding: 10px 15px;
+            border-radius: var(--radius-base);
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            width: 220px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .hint-arrow-mobile-nav {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 10px solid var(--color-teal-700);
+        }
+        /* --- END: Added Mobile Menu Hint Styles --- */
         .hint-close-btn {
             position: absolute;
             top: 2px;
@@ -544,6 +576,12 @@
             ::-webkit-scrollbar {
                 display: none;
             }
+            .hint-box-mobile-nav {
+                display: block; /* Show it ONLY on mobile */
+                opacity: 0;
+                /* Use the existing mobile animation */
+                animation: fadeInHintMobile 0.5s 1.5s forwards; 
+            }
             .nav__brand h2 {
                 font-size: 1.25rem;
             }
@@ -586,8 +624,15 @@
     <header class="header">
         <nav class="nav">
             <div class="nav__left">
+            <div style="position: relative;">
                 <button class="hamburger" id="hamburgerBtn">☰</button>
-                <div class="mobile-menu" id="mobileMenu">
+                <div id="menuHint" class="hint-box-mobile-nav">
+                    <button class="hint-close-btn" id="closeMenuHint">&times;</button>
+                    <span data-key="mobile_menu_hint">Click here to open the menu.</span>
+                    <div class="hint-arrow-mobile-nav"></div>
+                </div>
+            </div>
+            <div class="mobile-menu" id="mobileMenu">
                     <div class="nav__brand" style="cursor: pointer;" onclick="document.getElementById('landingView').scrollIntoView();">
                         <h2 data-key="sahara_logo">SAHARA SAATHI</h2>
                     </div>
@@ -958,7 +1003,8 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         login_info_message: "You can log in with your Full Name, Email, or the Patient ID below.",
         patient_id_is: "Your Patient ID is:",
         proceed_to_login: "Proceed to Login",
-        lang_hint_message: "Select your language here to continue."
+        lang_hint_message: "Select your language here to continue.",
+        mobile_menu_hint: "Click here to open the menu."
     },
     hi: {
         sahara_logo: "सहारा साथी",
@@ -1029,7 +1075,8 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         login_info_message: "आप अपने पूरे नाम, ईमेल, या नीचे दिए गए रोगी आईडी से लॉग इन कर सकते हैं।",
         patient_id_is: "आपकी रोगी आईडी है:",
         proceed_to_login: "लॉगिन करने के लिए आगे बढ़ें",
-        lang_hint_message: "जारी रखने के लिए यहां अपनी भाषा चुनें।"
+        lang_hint_message: "जारी रखने के लिए यहां अपनी भाषा चुनें।",
+        mobile_menu_hint: "मेनू खोलने के लिए यहां क्लिक करें।"
     },
     pa: {
         sahara_logo: "ਸਹਾਰਾ ਸਾਥੀ",
@@ -1099,7 +1146,8 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         login_info_message: "ਤੁਸੀਂ ਆਪਣੇ ਪੂਰੇ ਨਾਮ, ਈਮੇਲ, ਜਾਂ ਹੇਠਾਂ ਦਿੱਤੇ ਮਰੀਜ਼ ਆਈਡੀ ਨਾਲ ਲਾਗਇਨ ਕਰ ਸਕਦੇ ਹੋ।",
         patient_id_is: "ਤੁਹਾਡਾ ਮਰੀਜ਼ ਆਈਡੀ ਹੈ:",
         proceed_to_login: "ਲਾਗਿਨ ਕਰਨ ਲਈ ਅੱਗੇ ਵਧੋ",
-        lang_hint_message: "ਜਾਰੀ ਰੱਖਣ ਲਈ ਇੱਥੇ ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ।"
+        lang_hint_message: "ਜਾਰੀ ਰੱਖਣ ਲਈ ਇੱਥੇ ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ।",
+        mobile_menu_hint: "ਮੀਨੂ ਖੋਲ੍ਹਣ ਲਈ ਇੱਥੇ ਕਲਿੱਕ ਕਰੋ।"
     }
 };
 
@@ -1339,11 +1387,40 @@ window.addEventListener('pageshow', clearSessionOnPageShow);
         // Hamburger menu for mobile
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         const mobileMenu = document.getElementById('mobileMenu');
+        
+        // --- START: ADDED HINT LOGIC FOR MOBILE MENU ---
+        const menuHint = document.getElementById('menuHint');
+        const closeMenuHint = document.getElementById('closeMenuHint');
+
+        // Check if hint was already dismissed
+        if (localStorage.getItem('menuHintDismissed')) {
+            menuHint.style.display = 'none';
+        }
+        
+        // Function to dismiss the hint
+        const dismissMenuHint = () => {
+            if (menuHint.style.display !== 'none') {
+                menuHint.style.display = 'none';
+                localStorage.setItem('menuHintDismissed', 'true');
+            }
+        };
+
+        // Dismiss on 'x' button click
+        closeMenuHint.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent hamburger click
+            dismissMenuHint();
+        });
+        
+        // MODIFIED hamburger click listener
         hamburgerBtn.addEventListener('click', () => {
             mobileMenu.classList.toggle('open');
+            dismissMenuHint(); // Dismiss hint when user clicks the button
         });
+        // --- END: ADDED HINT LOGIC ---
+
         document.addEventListener('click', (e) => {
-            if (!hamburgerBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+            // MODIFIED: Check for the new parent wrapper, not just the button
+            if (hamburgerBtn && !hamburgerBtn.parentElement.contains(e.target) && !mobileMenu.contains(e.target)) {
                 mobileMenu.classList.remove('open');
             }
         });
