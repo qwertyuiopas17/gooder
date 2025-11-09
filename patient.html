@@ -760,7 +760,7 @@
         .chat-message { padding: 0.75rem 1rem; border-radius: 12px; max-width: 75%; }
         .user-message { background-color: var(--primary-color); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .bot-message { background-color: white; color: var(--text-color); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .chat-input { display: flex; gap: 0.5rem; }
+        .chat-input { display: flex; gap: 0.5rem; position: relative; }
         #chatInput { flex-grow: 1; }
 
         /* Bottom Navigation */
@@ -811,18 +811,19 @@
         .message-input { display: flex; gap: 0.5rem; }
         #messageInput { flex-grow: 1; padding: 0.5rem; border-radius: 8px; border: none; }
 
-        /* --- START: Added Chat Hint Box Styles --- */
+        /* --- START: Corrected Chat Hint Box Styles --- */
         .hint-box-chat {
             position: absolute;
-            bottom: 100px; /* Positioned above the input form */
-            right: 2.5rem; /* Aligned near the mic */
+            bottom: 100%; /* Position *above* the form */
+            right: 10px; /* Align near the mic icon */
+            margin-bottom: 8px; /* Space above the form */
             background: var(--primary-color-dark);
             color: var(--color-white);
             padding: 10px 15px;
             border-radius: var(--radius-base);
             box-shadow: var(--shadow-lg);
             z-index: 10;
-            width: 220px;
+            width: 240px;
             text-align: center;
             font-size: 14px;
             font-weight: 600;
@@ -831,8 +832,8 @@
         .hint-arrow-chat {
             position: absolute;
             top: 100%; /* At the bottom of the box */
-            left: 85%; /* Aligned with the mic */
-            transform: translateX(-50%);
+            right: 50px; /* Aligned with the mic icon (approx) */
+            transform: translateX(50%);
             width: 0; 
             height: 0; 
             border-left: 10px solid transparent;
@@ -842,15 +843,14 @@
 
         @media (max-width: 767px) {
             .hint-box-chat {
-                right: 1.5rem; /* Match card padding */
-                width: calc(100% - 3rem); /* Full width minus padding */
+                width: calc(100% - 20px); /* Adjust width for mobile */
+                right: 0;
             }
             .hint-arrow-chat {
-                left: 85%; /* Adjust arrow for mobile */
+                right: 60px; /* Adjust arrow for mobile mic position */
             }
         }
-        /* --- END: Added Chat Hint Box Styles --- */
-
+        /* --- END: Corrected Chat Hint Box Styles --- */
         /* Responsive */
         @media (min-width: 768px) {
             .bottom-nav { display: none; }
@@ -1456,10 +1456,12 @@
                     <div class="page-header"><h1 data-key="health_chatbot_title">Health Assistant</h1></div>
                     <div class="card chatbot-container">
                         <div class="chat-window" id="chatWindow"></div>
-                        <div id="micHint" class="hint-box-chat" style="display: none;"> <span id="micHintText"></span>
-                            <div class="hint-arrow-chat"></div>
-                        </div>
+                        
                             <form class="chat-input" id="chatForm">
+                            <div id="micHint" class="hint-box-chat" style="display: none;">
+                                <span id="micHintText"></span>
+                                <div class="hint-arrow-chat"></div>
+                            </div>
     <input type="text" id="chatInput" class="form-control" data-key="chatbot_placeholder" placeholder="Ask about symptoms, dosage...">
 
     <button type="button" class="btn" id="record-button" style="min-width: 50px;">🎤</button>
